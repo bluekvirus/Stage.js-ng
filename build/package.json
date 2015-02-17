@@ -1,0 +1,19 @@
+{
+  "name": "build",
+  "version": "1.0.0",
+  "description": "build tool",
+  "main": "index.js",
+  "scripts": {
+    "test": "N/A"
+  },
+  "author": "",
+  "license": "N/A",
+  "dependencies": {
+    "autoprefixer-brunch": "^1.8.4",
+    "babel-brunch": "^4.0.0",
+    "clean-css-brunch": "^1.7.1",
+    "gzip-brunch": "^1.3.0",
+    "less-brunch": "^1.8.1",
+    "uglify-js-brunch": "^1.7.7"
+  }
+}

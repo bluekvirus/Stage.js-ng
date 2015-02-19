@@ -1,5 +1,5 @@
 #WebUI Skeleton
-Brunch skeleton for single page web/hybrid front-end projects.
+Blueprint for single page web/hybrid front-end projects.
 
 ##Usage
 ###1. Create your project:
@@ -16,5 +16,5 @@ bower install
 cd ./build
 npm install
 ```
-Brunch configure is under `./build` as well.
+Gulp configure is under `./build` as well.
 

@@ -4,7 +4,7 @@ Blueprint for single page web/hybrid front-end projects.
 ##Usage
 ###1. Create your project:
 ```
-brunch new gh:bluekvirus/skeleton-webui .
+git clone https://github.com/bluekvirus/skeleton-webui.git .
 ```
 Ignore the error/warning messages as we didn't put any `bower.json` or `pakcage.json` under the project root.
 

@@ -11,11 +11,13 @@
  * 1. plugins:
  * 	  	settings for the plugins.
  * 2. control aspects: 
- * 		dist path, 
- * 		watch path:hooks, 
- * 		js[es6?plain? + vendor], 
- * 		assets, 
- * 		production[minify?gzip?]
+ * 		dist path,
+ * 		production[minify?gzip?],
+ * 		watch [incremental build?],
+ * 		js[es6?commonjs? + vendor],
+ * 		css,
+ * 		template, 
+ * 		assets (copy, rename (with jsminification))
  *
  * Override (create another configure)
  * -----------------------------------
@@ -31,6 +33,12 @@
  * 
  * ```
  * 
+ * Gotcha
+ * ------
+ * Enable es6 only affects commonjs modules.
+ * You can NOT use es6 in this build tool without 'require()'.
+ * 
+ * 
  * @author Tim Lauv
  * @created 2015.02.19
  *
@@ -41,20 +49,30 @@ exports.config = {
 	//---------------dist path--------------
 	output: 'public',
 
-	//-----------inified & gzipped?---------
+	//----------------watch-----------------
+	watching: false,
+
+	//-----------minified & gzipped?--------
+	//production build will ignore the watching configure.
 	production: false,
 	
 	//--------------js targets--------------
 	//[] --> use concat only, 
 	//'.js' --> as commonjs module and use browserify
 	//
-	es6: true, //only applies to commonjs targets)
+	es6: true, //only applies to commonjs targets
 	js: {
 		//app.js
 		app: 'app/main.js',
 
 		//vendor.js
-		vendor: []
+		vendor: [
+			'libs/bower_components/jquery/dist/jquery.js',
+			'libs/vendor/jquery-ui/position.js',
+			'libs/bower_components/director/build/director.js',
+			'libs/bower_components/reactive/reactive.js',
+			'libs/vendor/kube/js/kube.js'
+		]
 	},
 
 	//--------------css targets-------------
@@ -67,16 +85,25 @@ exports.config = {
 		main: 'app/main.less',
 
 		//vendor.css
-		vendor: []
+		vendor: [
+			'libs/bower_components/fontawesome/css/font-awesome.css',
+			'libs/vendor/kube/css/kube.css'
+		]
 	},
 
 	//------------templates.json------------
 	templates: ['app/**/*.tpl.html'],
 
 	//----------------assets----------------
-	assets: ['assets/*'],
+	//'string' --> as glob, copy as is
+	//{key: value} --> copy & rename/path
+	assets: [
+		'assets/**/*',
+		{'libs/bower_components/modernizr/modernizr.js':'js/modernizr.js'},
+		{'libs/bower_components/fontawesome/fonts':'fonts'}
+	],
 
-	//---------gulp plugin configs----------
+	//----------gulp plugin configs---------
 	plugins: {
 
 		less: {},

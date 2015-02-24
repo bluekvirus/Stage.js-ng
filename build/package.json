@@ -35,6 +35,7 @@
     "jshint-stylish": "^1.0.0",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.0.0",
-    "watchify": "^2.3.0"
+    "watchify": "^2.3.0",
+    "yargs": "^3.2.1"
   }
 }

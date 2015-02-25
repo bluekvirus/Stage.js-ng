@@ -53,7 +53,7 @@ exports.config = {
 	watching: false,
 
 	//-----------minified & gzipped?--------
-	//production build will ignore the watching configure.
+	//production build will ignore the watching flag above.
 	production: false,
 	
 	//--------------js targets--------------
@@ -92,11 +92,15 @@ exports.config = {
 	},
 
 	//------------templates.json------------
+	//
 	templates: ['app/**/*.tpl.html'],
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is
 	//{key: value} --> copy & rename/path
+	//
+	//note that overlapping path will be merged.
+	//
 	assets: [
 		'assets/**/*',
 		{'libs/bower_components/modernizr/modernizr.js':'js/modernizr.js'},
@@ -104,6 +108,7 @@ exports.config = {
 	],
 
 	//----------gulp plugin configs---------
+	//
 	plugins: {
 
 		less: {},

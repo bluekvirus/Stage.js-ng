@@ -36,7 +36,7 @@
  * Gotcha
  * ------
  * Enable es6 only affects commonjs modules.
- * You can NOT use es6 in this build tool without 'require()'.
+ * You can NOT use es6 in this build tool without commonjs 'require()'.
  * 
  * 
  * @author Tim Lauv
@@ -53,7 +53,7 @@ exports.config = {
 	watching: false,
 
 	//-----------minified & gzipped?--------
-	//production build will ignore the watching flag above.
+	//production build will ignore the watch flag above.
 	production: false,
 	
 	//--------------js targets--------------

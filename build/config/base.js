@@ -4,7 +4,8 @@
  * 
  * Base Path
  * ---------
- * All path are based on the project root. [not this configure file]
+ * All path are based on the project root. 
+ * [which is the same level of the build folder and not this configure file]
  *
  * Configure
  * ---------
@@ -70,7 +71,7 @@ exports.config = {
 			'libs/bower_components/jquery/dist/jquery.js',
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/director/build/director.js',
-			'libs/bower_components/reactive/reactive.js',
+			'libs/bower_components/reactive/ractive.js',
 			'libs/vendor/kube/js/kube.js'
 		]
 	},

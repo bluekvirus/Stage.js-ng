@@ -22,17 +22,7 @@
  *
  * Override (create another configure)
  * -----------------------------------
- * Use the following code:
- * 
- * ```
- * 
- * var extend = require('extend');
- * var base = require('./base.js');
- * exports.config = extend(true, base, {
- * 		//deep extending the base configure...
- * });
- * 
- * ```
+ * use `gulp -C <name> or --config <name>` to load up other configure file instead of this one.
  * 
  * Gotcha
  * ------
@@ -45,7 +35,7 @@
  *
  */
 
-exports.config = {
+module.exports = {
 
 	//---------------dist path--------------
 	output: 'public',

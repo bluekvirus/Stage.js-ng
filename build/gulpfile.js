@@ -3,12 +3,18 @@
  *
  * Tasks
  * -----
- * 1. css: LESS -> CSS -> /{dist}/css/main.css (+prefix, +clean)
- * 2. tpl: Templates (html) -> wrap into {name: content} -> /{dist}/templates.json
- * 3. js: JS -> [babel (es6)] -> [browserify (commonjs bundle)] -> /{dist}/app.js & vendor.js (+lint)
- * 4. assets: Assets/* -> copy into /{dist}/*, copy and rename/merge certain file/folder
- * 5. compress: minify and gzip the *.js and *.css in the output folder.
- * 6. watch: Watching changes in the /app folder and trigger certain task(s)
+ * Required:
+ * 
+ * 1. css: LESS -> CSS -> /{output}/css/main.css (+prefix, +clean)
+ * 2. tpl: Templates (html) -> wrap into {name: content} -> /{output}/templates.json
+ * 3. js: JS -> babel (es6) -> [browserify (commonjs bundle)] -> /{output}/app.js
+ * 4. libs: vendor/shared util JS -> concatenate -> {output}/libs.js
+ * 5. assets: Assets/* -> copy into /{output}/*, copy and rename/merge certain file/folder
+ * 6. compress: minify and gzip the *.js and *.css in the output folder.
+ *
+ * Optional:
+ * 
+ * 7. watch: Watching changes in the /src folder and trigger certain task(s)
  *
  * Configure
  * ---------

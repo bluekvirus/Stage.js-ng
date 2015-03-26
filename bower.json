@@ -20,7 +20,8 @@
     "director": "~1.2.8",
     "ractive": "~0.6.1",
     "bootstrap": "~3.3.4",
-    "riot": "~2.0.13"
+    "riot": "~2.0.13",
+    "lodash": "~3.6.0"
   },
   "devDependencies": {
     "mocha": "~2.1.0",

@@ -23,6 +23,14 @@
  * Override (create another configure)
  * -----------------------------------
  * use `gulp -C <name> or --config <name>` to load up other configure file instead of this one.
+ *
+ * *Hint*: how to create another configure file? 
+ * ```
+ * 		module.exports = require('lodash').merge(require('.default'), {
+ * 			...
+ * 		 	...
+ *   	});
+ * ```
  * 
  * Gotcha
  * ------
@@ -51,6 +59,7 @@ module.exports = {
 	libs: [
 		'libs/bower_components/jquery/dist/jquery.js',
 		'libs/vendor/jquery-ui/position.js',
+		'libs/bower_components/lodash/lodash.js',
 		'libs/bower_components/director/build/director.js',
 		'libs/bower_components/reactive/ractive.js',
 	],

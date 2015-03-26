@@ -47,33 +47,33 @@ module.exports = {
 	//production build will ignore the watch flag above.
 	production: false,
 	
-	//--------------js targets--------------
-	//[] --> use concat only, 
-	//'.js' --> as es6 modules (import, expose)
+	//------------concat libs.js----------
+	libs: [
+		'libs/bower_components/jquery/dist/jquery.js',
+		'libs/vendor/jquery-ui/position.js',
+		'libs/bower_components/director/build/director.js',
+		'libs/bower_components/reactive/ractive.js',
+	],
+
+	//--------------js modules--------------
+	// as es6 modules (import, expose)
 	//
 	js: {
 		//app.js
 		app: 'src/main.js',
 
-		//vendor.js
-		vendor: [
-			'libs/bower_components/jquery/dist/jquery.js',
-			'libs/vendor/jquery-ui/position.js',
-			'libs/bower_components/director/build/director.js',
-			'libs/bower_components/reactive/ractive.js',
-		]
 	},
 
-	//--------------css targets-------------
+	//------------templates.json------------
+	// (put together with js modules under /src)
+	templates: ['src/**/*.tpl.html'],
+
+	//--------------style targets-------------
 	//[] --> use concat only, 
 	//'.less' - lessc, 
 	//'.scss' - scss (TBI)
 	//
 	css: 'styles/base.less', // into base.css
-
-	//------------templates.json------------
-	//ractive or riot?
-	templates: ['src/**/*.tpl.html'],
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is

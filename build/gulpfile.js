@@ -48,8 +48,13 @@ gulp.task('default', false, function defaultTask(){
 	console.log(configure);
 });
 
+//libs
+gulp.task('libs', 'Concatenate js libraries', function libsTask(){
+	console.log(configure.libs);
+});
+
 //js
-gulp.task('js', 'Compile or combine the Javascripts', function jsTask(){
+gulp.task('js', 'Compile js modules through es6', function jsTask(){
 	console.log(configure.js);
 });
 

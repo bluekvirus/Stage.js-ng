@@ -15,7 +15,7 @@
  * 		dist path,
  * 		production[minify?gzip?],
  * 		watch [incremental build?],
- * 		js[es6?commonjs? + vendor],
+ * 		js[es6 + vendor concat],
  * 		css,
  * 		template, 
  * 		assets (copy, rename (with jsminification))
@@ -26,8 +26,8 @@
  * 
  * Gotcha
  * ------
- * Enable es6 only affects commonjs modules.
- * You can NOT use es6 in this build tool without commonjs 'require()'.
+ * 1. All non-concatenated .js files will be treated as es6, thus should use `import` and `expose` module key words.
+ * 2. Concatenated lib and vendor .js files can be used directly using their globally exposed vars.
  * 
  * 
  * @author Tim Lauv
@@ -49,12 +49,11 @@ module.exports = {
 	
 	//--------------js targets--------------
 	//[] --> use concat only, 
-	//'.js' --> as commonjs module and use browserify
+	//'.js' --> as es6 modules (import, expose)
 	//
-	es6: true, //only applies to commonjs targets
 	js: {
 		//app.js
-		app: 'app/main.js',
+		app: 'src/main.js',
 
 		//vendor.js
 		vendor: [
@@ -62,7 +61,6 @@ module.exports = {
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/director/build/director.js',
 			'libs/bower_components/reactive/ractive.js',
-			'libs/vendor/kube/js/kube.js'
 		]
 	},
 
@@ -71,20 +69,11 @@ module.exports = {
 	//'.less' - lessc, 
 	//'.scss' - scss (TBI)
 	//
-	css: {
-		//main.css
-		main: 'app/main.less',
-
-		//vendor.css
-		vendor: [
-			'libs/bower_components/fontawesome/css/font-awesome.css',
-			'libs/vendor/kube/css/kube.css'
-		]
-	},
+	css: 'styles/base.less', // into base.css
 
 	//------------templates.json------------
-	//
-	templates: ['app/**/*.tpl.html'],
+	//ractive or riot?
+	templates: ['src/**/*.tpl.html'],
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is
@@ -106,8 +95,7 @@ module.exports = {
 		autoprefixer: {},
 		cleancss: {},
 		
-		babelify: {}, //es6
-		browserify: {}, //commonjs
+		babel: {}, //es6
 		
 		uglify: {},
 		gzip: {}

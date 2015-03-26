@@ -38,6 +38,7 @@ var argv = require('yargs').option('C', {
 }).argv;
 // load the targeted configure.
 var configure = require(path.join(__dirname, 'config', argv.C));
+configure.root = configure.root || path.join(__dirname, '..');
 console.log('Using configure:', argv.C.yellow);
 
 
@@ -48,12 +49,12 @@ gulp.task('default', false, function defaultTask(){
 });
 
 //js
-gulp.task('js', 'Bundle or combine the Javascripts', function jsTask(){
+gulp.task('js', 'Compile or combine the Javascripts', function jsTask(){
 	console.log(configure.js);
 });
 
 //tpl
-gulp.task('tpl', 'Combine HTML templates', function tplTask(){
+gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 	console.log(configure.templates);
 });
 

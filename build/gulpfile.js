@@ -41,9 +41,12 @@ size = require('gulp-size'),
 rename = require('gulp-rename'),
 gzip = require('gulp-gzip'),
 uglify = require('gulp-uglify'),
-mincss = require('gulp-minify-css'),
+mincss = require('gulp-minify-css'), //using clean-css internally
 minhtml = require('gulp-minify-html'),
 filter = require('gulp-filter'),
+less = require('gulp-less'),
+autoprefixer = require('gulp-autoprefixer'),
+plumber = require('gulp-plumber'),
 del = require('del');
 
 //---------------Configure--------------
@@ -73,6 +76,7 @@ gulp.task('libs', 'Concatenate js libraries', function libsTask(){
 		.pipe(size({showFiles: true}))
 		.pipe(concat('libs.js', {newLine: ';'}))
 		.pipe(srcmaps.write())
+		.pipe(rename({dirname: 'js'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
@@ -87,8 +91,19 @@ gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 });
 
 //css
-gulp.task('css', 'Compile css from LESS/SCSS', function cssTask(){
-	console.log(configure.css);
+gulp.task('css', 'Compile css from LESS', function cssTask(){
+	//console.log(configure.css);
+	return gulp.src(configure.css, {cwd: configure.root})
+		.pipe(less({
+			paths: [configure.root, 
+					path.join(configure.root, 'libs'), 
+					path.join(configure.root, 'libs', 'bower_components')
+					]
+
+		}))
+		.pipe(autoprefixer(configure.plugins.autoprefixer))
+		.pipe(rename({dirname: 'css'}))
+		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
 //assets

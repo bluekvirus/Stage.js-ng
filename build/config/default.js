@@ -80,7 +80,6 @@ module.exports = {
 	//--------------style targets-------------
 	//[] --> use concat only, 
 	//'.less' - lessc, 
-	//'.scss' - scss (TBI)
 	//
 	css: 'styles/base.less', // into base.css
 
@@ -100,19 +99,18 @@ module.exports = {
 	//
 	plugins: {
 
-		less: {},
 		autoprefixer: {},
-		cleancss: {},
+		'minify-css': {}, //clean-css
 		
 		babel: {}, //es6
-		
 		uglify: {},
-		'minify-css': {},
+		
 		'minify-html': {
 			empty: true,
 			conditionals: true,
 			spare: true
 		},
+
 		gzip: {}
 
 	},

@@ -46,7 +46,7 @@ minhtml = require('gulp-minify-html'),
 filter = require('gulp-filter'),
 less = require('gulp-less'),
 autoprefixer = require('gulp-autoprefixer'),
-plumber = require('gulp-plumber'),
+//plumber = require('gulp-plumber'),
 del = require('del');
 
 //---------------Configure--------------

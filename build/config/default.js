@@ -75,24 +75,27 @@ module.exports = {
 
 	//------------templates.json------------
 	// (put together with js modules under /src)
-	templates: ['src/**/*.tpl.html'],
+	templates: 'src/**/*.tpl.html',
 
-	//--------------style targets-------------
-	//[] --> use concat only, 
-	//'.less' - lessc, 
-	//
+	//-----------------style----------------
 	css: 'styles/base.less', // into base.css
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is
-	//{key: value} --> copy & rename/path
+	//{key: value} --> copy & re-dir
 	//
-	//note that overlapping path will be merged.
+	//overlapping folder will be merged.
 	//
 	assets: [
+		//glob (copy/exclude as is)
 		'assets/**/*',
-		{'libs/bower_components/modernizr/modernizr.js':'js/modernizr.js'},
-		{'libs/bower_components/fontawesome/fonts':'fonts'}
+		'!*.empty',
+		//copy and re-dir (put in different folder) *NOT rename!*
+		{
+			'libs/bower_components/modernizr/modernizr.js':'js',
+			'libs/bower_components/fontawesome/fonts/*':'fonts',
+			'libs/bower_components/bootstrap/dist/fonts/*': 'fonts'
+		},
 	],
 
 	//----------gulp plugin configs---------

@@ -9,7 +9,7 @@
  * 2. tpl: Templates (html) -> wrap into {name: content} -> /{output}/templates.json
  * 3. module: JS -> babel (es6) -> [browserify (commonjs bundle)] -> /{output}/app.js
  * 4. libs: Vendor/Shared util JS -> concatenate -> {output}/libs.js
- * 5. assets: Assets/* -> copy into /{output}/*, copy and rename/merge certain file/folder
+ * 5. assets: Assets/* -> copy into /{output}/*, copy and re-dir/merge certain file/folder
  * 6. compress: Minify and gzip the *.js and *.css in the output folder.
  *
  * Optional:
@@ -34,6 +34,7 @@
 
 require('colors');
 var path = require('path'),
+_ = require('lodash'),
 gulp = require('gulp-help')(require('gulp')),
 concat = require('gulp-concat'),
 srcmaps = require('gulp-sourcemaps'),
@@ -47,6 +48,7 @@ filter = require('gulp-filter'),
 less = require('gulp-less'),
 autoprefixer = require('gulp-autoprefixer'),
 //plumber = require('gulp-plumber'),
+mergeStream = require('merge-stream'),
 del = require('del');
 
 //---------------Configure--------------
@@ -87,7 +89,7 @@ gulp.task('module', 'Compile js modules through es6', function jsTask(){
 
 //tpl
 gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
-	console.log(configure.templates);
+	//console.log(configure.templates);
 });
 
 //css
@@ -107,8 +109,27 @@ gulp.task('css', 'Compile css from LESS', function cssTask(){
 });
 
 //assets
-gulp.task('assets', 'Copy assets', function assetsTask(){
-	console.log(configure.assets);
+gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
+	//console.log(configure.assets);
+	var glob = [], renameMap = {};
+	_.each(configure.assets, function(a){
+		if(_.isString(a)) glob.push(a);
+		else _.extend(renameMap, a);
+	});
+
+	var merged = mergeStream(
+		//glob (copy as is)
+		gulp.src(glob, {cwd: configure.root})
+			.pipe(gulp.dest(configure.output, {cwd: configure.root}))
+	);
+
+	_.forIn(renameMap, function(v, k){
+		//copy (k = target file) & rename (v = new dir name)
+		merged.add(gulp.src(k, {cwd: configure.root}).pipe(rename({dirname: v}))
+			.pipe(gulp.dest(configure.output, {cwd: configure.root})));
+	});
+
+	return merged.pipe(size({showFiles: true}));
 });
 
 //compress
@@ -142,8 +163,7 @@ gulp.task('compress', 'Minify and Gzip the js/html/css files', function compress
 
 //clean
 gulp.task('clean', 'Purge the output folder', function cleanTask(){
-	return del('*', {cwd: path.join(configure.root, configure.output), force: true}, function(err, deletedFiles){
-		console.log('Files deleted:', deletedFiles.length);
-		console.log(deletedFiles.join(require('os').EOL));
-	});
+	var deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
+	console.log('Files deleted:', deletedFiles.length);
+	console.log(deletedFiles.join(require('os').EOL));
 });

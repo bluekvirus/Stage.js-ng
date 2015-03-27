@@ -52,7 +52,7 @@ module.exports = {
 	watching: false,
 
 	//-----------minified & gzipped?--------
-	//production build will ignore the watch flag above.
+	//applies to all js, css and index.html
 	production: false,
 	
 	//------------concat libs.js----------
@@ -61,13 +61,13 @@ module.exports = {
 		'libs/vendor/jquery-ui/position.js',
 		'libs/bower_components/lodash/lodash.js',
 		'libs/bower_components/director/build/director.js',
-		'libs/bower_components/reactive/ractive.js',
+		'libs/bower_components/ractive/ractive.js',
 	],
 
 	//--------------js modules--------------
 	// as es6 modules (import, expose)
 	//
-	js: {
+	modules: {
 		//app.js
 		app: 'src/main.js',
 
@@ -107,6 +107,12 @@ module.exports = {
 		babel: {}, //es6
 		
 		uglify: {},
+		'minify-css': {},
+		'minify-html': {
+			empty: true,
+			conditionals: true,
+			spare: true
+		},
 		gzip: {}
 
 	},

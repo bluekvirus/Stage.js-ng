@@ -1,5 +1,5 @@
 /**
- * Gulp build tasks.
+ * Gulp build tasks. 
  *
  * Tasks
  * -----
@@ -17,6 +17,8 @@
  * 7. watch: Watching changes in the /src folder and trigger certain task(s)
  * 8. clean: Clear the output folder.
  *
+ * (tasks using `return gulp.src()...` will be running in parallel)
+ *
  * Configure
  * ---------
  * see ./config/<name>.js
@@ -24,7 +26,7 @@
  * Note
  * ----
  * 1. Javascripts will always be **linted** and css will always be **autoprefixed** and **cleaned**.
- * 2. To auto minify and gzip requires setting the production flag to true in configure.
+ * 2. To auto minify and gzip requires setting the production flag to true in configure. (manual task: compress)
  * 3. use `gulp --config [name] [task]` to load a different configure per task run.
  * 
  * 
@@ -68,12 +70,18 @@ console.log('Using configure:', argv.C.yellow);
 
 
 //----------------Tasks-----------------
-//default
-gulp.task('default', false, function defaultTask(){
-	console.log(configure);
+//=======
+//default (without compress)
+//=======
+gulp.task('default', false, 
+	['clean', 'module', 'tpl', 'css', 'assets', 'libs'], 
+function defaultTask(){
 });
 
+
+//====
 //libs
+//====
 gulp.task('libs', 'Concatenate js libraries', function libsTask(){
 	//console.log(configure.libs);
 	return gulp.src(configure.libs, {cwd: configure.root})
@@ -85,12 +93,18 @@ gulp.task('libs', 'Concatenate js libraries', function libsTask(){
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
-//module
+
+//======
+//module (TBI)
+//======
 gulp.task('module', 'Compile js modules through es6', function jsTask(){
 	console.log(configure.modules);
 });
 
+
+//===
 //tpl (using through2 to transform/combine files in stream)
+//===
 gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 	//console.log(configure.templates);
 	var tpls = {}; // --> JSON.stringify() upon 'finish'
@@ -114,7 +128,10 @@ gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
+
+//===
 //css
+//===
 gulp.task('css', 'Compile css from LESS', function cssTask(){
 	//console.log(configure.css);
 	return gulp.src(configure.css, {cwd: configure.root})
@@ -130,7 +147,10 @@ gulp.task('css', 'Compile css from LESS', function cssTask(){
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
+
+//======
 //assets
+//======
 gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
 	//console.log(configure.assets);
 	var glob = [], renameMap = {};
@@ -154,7 +174,10 @@ gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
 	return merged.pipe(size({showFiles: true}));
 });
 
+
+//========
 //compress
+//========
 gulp.task('compress', 'Minify and Gzip the js/html/css files', function compressTask(){
 	//console.log(configure.production);
 	var filters = {
@@ -183,9 +206,13 @@ gulp.task('compress', 'Minify and Gzip the js/html/css files', function compress
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
+
+//=====
 //clean
+//=====
 gulp.task('clean', 'Purge the output folder', function cleanTask(){
 	var deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
 	console.log('Files deleted:', deletedFiles.length);
-	console.log(deletedFiles.join(require('os').EOL));
+	if(deletedFiles.length) deletedFiles.push('');// add an empty line.
+	console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
 });

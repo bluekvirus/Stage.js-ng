@@ -15,7 +15,7 @@ cd ./build
 npm install
 ```
 
-###.3. Build:
+###3. Build:
 ```
 cd ./build
 gulp help

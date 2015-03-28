@@ -10,7 +10,7 @@
  * Configure
  * ---------
  * 1. plugins:
- * 	  	settings for the plugins.
+ * 	  	settings for some gulp plugins.
  * 2. control aspects: 
  * 		dist path,
  * 		production[minify?gzip?],
@@ -18,7 +18,7 @@
  * 		js[es6 + vendor concat],
  * 		css,
  * 		template, 
- * 		assets (copy, rename (with jsminification))
+ * 		assets (copy, re-dirname)
  *
  * Override (create another configure)
  * -----------------------------------
@@ -35,7 +35,7 @@
  * Gotcha
  * ------
  * 1. All non-concatenated .js files will be treated as es6, thus should use `import` and `expose` module key words.
- * 2. Concatenated lib and vendor .js files can be used directly using their globally exposed vars.
+ * 2. Concatenated lib/vendor .js files can be used directly using their globally exposed vars.
  * 
  * 
  * @author Tim Lauv

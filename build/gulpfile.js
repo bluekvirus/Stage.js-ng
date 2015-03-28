@@ -34,6 +34,7 @@
 
 require('colors');
 var path = require('path'),
+fs = require('fs'),
 _ = require('lodash'),
 gulp = require('gulp-help')(require('gulp')),
 concat = require('gulp-concat'),
@@ -47,6 +48,8 @@ minhtml = require('gulp-minify-html'),
 filter = require('gulp-filter'),
 less = require('gulp-less'),
 autoprefixer = require('gulp-autoprefixer'),
+through = require('through2'),
+gutil = require('gulp-util'),
 //plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
 del = require('del');
@@ -87,9 +90,28 @@ gulp.task('module', 'Compile js modules through es6', function jsTask(){
 	console.log(configure.modules);
 });
 
-//tpl
+//tpl (using through2 to transform/combine files in stream)
 gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 	//console.log(configure.templates);
+	var tpls = {}; // --> JSON.stringify() upon 'finish'
+	var file = new gutil.File({path: 'templates.json'});
+	return gulp.src(configure.templates, {cwd: configure.root})
+		.pipe(through.obj(function(file, encode, cb){
+			//on 'file'
+			//file is a vinyl File object (https://github.com/wearefractal/vinyl)
+			if(file.isBuffer()){ //skipping isNull() & isStream()
+				tpls[file.relative] = (String(file.contents)); //use as is
+				//comments are preserved, no tag and attribute cleanup.
+			}
+			return cb(); //won't pass down the examined template file.
+		}, function(cb){
+			//on 'finish'
+			file.contents = new Buffer(JSON.stringify(tpls, null, 2)); //utf-8
+			this.push(file); //pass down the overall merged json file.
+			cb();
+		}))
+		.pipe(size({showFiles: true}))
+		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
 //css

@@ -75,7 +75,7 @@ module.exports = {
 
 	//------------templates.json------------
 	// (put together with js modules under /src)
-	templates: 'src/**/*.tpl.html',
+	templates: ['src/**/*.tpl.html'],
 
 	//-----------------style----------------
 	css: 'styles/base.less', // into base.css

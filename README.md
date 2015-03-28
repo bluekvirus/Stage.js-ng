@@ -18,7 +18,7 @@ npm install
 ###3. Build:
 ```
 cd ./build
-gulp help
+gulp [help]
 ```
 See Gulpfile under `./build`.
 

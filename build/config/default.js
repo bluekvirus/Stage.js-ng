@@ -15,7 +15,7 @@
  * 		dist path,
  * 		compress[minify, gzip],
  * 		watch [incremental build?],
- * 		js[es6 + vendor concat],
+ * 		js[es6, concat],
  * 		css,
  * 		template, 
  * 		assets (copy, re-dirname)
@@ -36,6 +36,8 @@
  * ------
  * 1. All non-concatenated .js files will be treated as es6, thus should use `import` and `expose` module key words.
  * 2. Concatenated lib/vendor .js files can be used directly using their globally exposed vars.
+ * 3. We embed sourcemaps inside compiled/concatenated js targets, thus resulting x3 file size.
+ * 4. Minified js, css and html will not contain sourcemaps and comments (except for special / *!..* /)
  *
  * Important Note
  * --------------
@@ -62,23 +64,22 @@ module.exports = {
 	//-----------minified & gzipped?--------
 	//applies to all js, css and index.html
 	production: false,
-	
-	//------------concat libs.js----------
-	libs: [
-		'libs/bower_components/jquery/dist/jquery.js',
-		'libs/vendor/jquery-ui/position.js',
-		'libs/bower_components/lodash/lodash.js',
-		'libs/bower_components/director/build/director.js',
-		'libs/bower_components/ractive/ractive.js',
-	],
 
-	//--------------js modules--------------
-	// as es6 modules (import, expose)
-	//
-	modules: {
+	//------------js (modules/libs)---------
+	// 'entrypoint' as es6 modules (import, expose)
+	// '[...]' as vanilla js concat
+	js: {
 		//app.js
 		app: 'src/main.js',
 
+		//libs.js
+		libs: [
+			'libs/bower_components/jquery/dist/jquery.js',
+			'libs/vendor/jquery-ui/position.js',
+			'libs/bower_components/lodash/lodash.js',
+			'libs/bower_components/director/build/director.js',
+			'libs/bower_components/ractive/ractive.js',
+		],
 	},
 
 	//------------templates.json------------

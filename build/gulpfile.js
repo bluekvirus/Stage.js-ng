@@ -6,16 +6,19 @@
  * Required:
  * 
  * 1. css: LESS -> CSS -> /{output}/css/main.css (+prefix, +clean)
- * 2. tpl: Templates (html) -> wrap into {name: content} -> /{output}/templates.json
- * 3. modules: JS (es6) -> [browserify (commonjs bundle + babelify)] -> /{output}/app.js
- * 4. libs: Vendor/Shared util JS -> concatenate -> {output}/libs.js
- * 5. assets: Assets/* -> copy into /{output}/*, copy and re-dir/merge certain file/folder
- * 6. compress: Minify and gzip the *.js and *.css in the output folder.
+ * 2. tpl: templates (html) -> wrap into {name: content} -> /{output}/templates.json
+ * 3. js: 
+ * 		a. es6/commonjs -> [browserify (commonjs bundle + babelify)] -> /{output}/app.js
+ * 		b. vendor/shared util JS -> concatenate -> {output}/libs.js
+ * 4. assets: 
+ * 		a. assets/* -> copy into /{output}/*
+ * 		b. copy and re-dir/merge certain file/folder
+ * 5. compress: minify and gzip the *.js and *.css in the output folder.
  *
  * Optional:
  * 
- * 7. watch: Watching changes in the /src folder and trigger certain task(s)
- * 8. clean: Clear the output folder.
+ * 6. watch: watching changes in the /src folder and trigger certain task(s)
+ * 7. clean: clear the output folder.
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
  *
@@ -76,48 +79,41 @@ console.log('Using configure:', argv.C.yellow);
 //default (without compress)
 //=======
 gulp.task('default', false, 
-	_.compact(['clean', 'modules', 'tpl', 'css', 'assets', 'libs', configure.production?'compress':false]), 
-function defaultTask(){
-});
-
-
-//====
-//libs (jshint?)
-//====
-gulp.task('libs', 'Concatenate js libraries', function libsTask(){
-	//console.log(configure.libs);
-	return gulp.src(configure.libs, {cwd: configure.root})
-		.pipe(srcmaps.init())
-		.pipe(size({showFiles: true}))
-		.pipe(concat('libs.js', {newLine: ';'}))
-		.pipe(srcmaps.write())
-		.pipe(rename({dirname: 'js'}))
-		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
-});
+	_.compact(['clean', 'js', 'tpl', 'css', 'assets', configure.production?'compress':false])
+);
 
 
 //=======
-//modules (jshint?)
+//js (jshint?)
 //=======
-gulp.task('modules', 'Compile js modules through es6', function jsTask(){
-	//console.log(configure.modules);
+gulp.task('js', 'Compile/Concat js modules(es6)/libs', function jsTask(){
+	//console.log(configure.js);
 	var merged = mergeStream();
-	_.forIn(configure.modules, function(v, k){
-		//v --> glob, k --> js target
+	_.forIn(configure.js, function(v, k){
+		//v --> entrypoint/array, k --> js target
 		merged.add(
-			gulp.src(v, {cwd: configure.root, read: false})
-				.pipe(browserify(_.extend({
-					//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
-					transform: babel.configure(configure.plugins.babel),
-					debug: true //(+sourcemap)
+			(_.isArray(v)?
+				gulp.src(v, {cwd: configure.root})
+					//array: concat only
+					.pipe(size({showFiles: true, title: k + '.js:concat'}))
+					.pipe(srcmaps.init()) 
+					.pipe(concat('tmp.js', {newLine: ';'}))
+					.pipe(srcmaps.write()) //(+sourcemap, size x3+)
+				:
+				gulp.src(v, {cwd: configure.root, read: false})
+					//entrypoint: turned into commonjs & bundled with require()
+					.pipe(browserify(_.extend({
+						//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
+						transform: babel.configure(configure.plugins.babel),
+						debug: true //(+sourcemap, size x3+)
 				}, configure.plugins.browserify)))
-				//turned into commonjs & bundled with require()
-				.pipe(rename({dirname: 'js', basename: k}))
-				.pipe(gulp.dest(configure.output, {cwd:configure.root}))
+			)
+			.pipe(rename({dirname: 'js', basename: k}))
+			.pipe(gulp.dest(configure.output, {cwd:configure.root}))
 		);
 	});
 
-	return merged.pipe(size({showFiles: true}));
+	return merged.pipe(size({showFiles: true, title: 'js'}));
 });
 
 
@@ -129,6 +125,7 @@ gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 	var tpls = {}; // --> JSON.stringify() upon 'finish'
 	var file = new gutil.File({path: 'templates.json'});
 	return gulp.src(configure.templates, {cwd: configure.root})
+		.pipe(size({showFiles: true, title: 'tpl'}))
 		.pipe(through.obj(function(file, encode, cb){
 			//on 'file'
 			//file is a vinyl File object (https://github.com/wearefractal/vinyl)
@@ -143,7 +140,7 @@ gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 			this.push(file); //pass down the overall merged json file.
 			cb();
 		}))
-		.pipe(size({showFiles: true}))
+		.pipe(size({showFiles: true, title: 'tpl'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
@@ -155,14 +152,16 @@ gulp.task('css', 'Compile css from LESS', function cssTask(){
 	//console.log(configure.css);
 	return gulp.src(configure.css, {cwd: configure.root})
 		.pipe(less({
-			paths: [configure.root, 
-					path.join(configure.root, 'libs'), 
-					path.join(configure.root, 'libs', 'bower_components')
-					]
+			paths: [
+				configure.root, 
+				path.join(configure.root, 'libs'), 
+				path.join(configure.root, 'libs', 'bower_components')
+			]
 
 		}))
 		.pipe(autoprefixer(configure.plugins.autoprefixer))
 		.pipe(rename({dirname: 'css'}))
+		.pipe(size({showFiles: true, title: 'css'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
@@ -190,7 +189,7 @@ gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
 			.pipe(gulp.dest(configure.output, {cwd: configure.root})));
 	});
 
-	return merged.pipe(size({showFiles: true}));
+	return merged.pipe(size({showFiles: true, title: 'assets'}));
 });
 
 
@@ -218,10 +217,10 @@ gulp.task('compress', 'Minify and Gzip the js/html/css files', function compress
 		.pipe(filters.html.restore())
 
 		.pipe(rename({suffix: '.min'}))
-		.pipe(size({showFiles: true}))
+		.pipe(size({showFiles: true, title: 'compress:minify'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}))
 		.pipe(gzip(configure.plugins.gzip))
-		.pipe(size({showFiles: true}))
+		.pipe(size({showFiles: true, title: 'compress:gzip'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 

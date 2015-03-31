@@ -9,6 +9,9 @@
   "author": "Tim Lauv <bluekvirus@gmail.com>",
   "license": "N/A",
   "dependencies": {
+
+  },
+  "devDependencies": {
     "babelify": "^5.0.4",
     "colors": "^1.0.3",
     "del": "^1.1.1",

@@ -13,7 +13,7 @@
  * 	  	settings for some gulp plugins.
  * 2. control aspects: 
  * 		dist path,
- * 		production[minify?gzip?],
+ * 		compress[minify, gzip],
  * 		watch [incremental build?],
  * 		js[es6 + vendor concat],
  * 		css,
@@ -36,6 +36,14 @@
  * ------
  * 1. All non-concatenated .js files will be treated as es6, thus should use `import` and `expose` module key words.
  * 2. Concatenated lib/vendor .js files can be used directly using their globally exposed vars.
+ *
+ * Important Note
+ * --------------
+ * We use babel for es6 -> commonjs and browserfiy for commonjs -> browser. Thus the package.json file in this build 
+ * folder could contain npm modules in the `dependencies` block and gets bundled by browserify. Although we do NOT encourage
+ * bundling browser side libraries this way, the `dependencies` block is left clean open and up to you. 
+ * 
+ * We highly recommend using the `gulp libs` task and bower package manager for browser side library management. 
  * 
  * 
  * @author Tim Lauv
@@ -103,14 +111,19 @@ module.exports = {
 	plugins: {
 
 		autoprefixer: {},
-		'minify-css': {}, //clean-css
+		'minify-css': {
+			keepSpecialComments: '*' //special comment only (e.g license)
+		}, //use clean-css internally
 		
-		babel: {}, //es6
-		uglify: {},
+		babel: {}, //es6 -> commonjs
+		browserify: {}, //commonjs -> browser
+		uglify: {
+			preserveComments: 'some' //special comment only (e.g license)
+		},
 		
 		'minify-html': {
 			empty: true,
-			conditionals: true,
+			conditionals: true, //remove comments but not the ie ones.
 			spare: true
 		},
 

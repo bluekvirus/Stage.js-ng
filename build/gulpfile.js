@@ -76,13 +76,13 @@ console.log('Using configure:', argv.C.yellow);
 //default (without compress)
 //=======
 gulp.task('default', false, 
-	['clean', 'modules', 'tpl', 'css', 'assets', 'libs'], 
+	_.compact(['clean', 'modules', 'tpl', 'css', 'assets', 'libs', configure.production?'compress':false]), 
 function defaultTask(){
 });
 
 
 //====
-//libs
+//libs (jshint?)
 //====
 gulp.task('libs', 'Concatenate js libraries', function libsTask(){
 	//console.log(configure.libs);
@@ -106,10 +106,11 @@ gulp.task('modules', 'Compile js modules through es6', function jsTask(){
 		//v --> glob, k --> js target
 		merged.add(
 			gulp.src(v, {cwd: configure.root, read: false})
-				.pipe(browserify({
-					//insertGlobals : true, (process, __filename, __dirname, ...) skipped atm.
-					transform: babel.configure(configure.plugins.babel)
-				}))
+				.pipe(browserify(_.extend({
+					//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
+					transform: babel.configure(configure.plugins.babel),
+					debug: true //(+sourcemap)
+				}, configure.plugins.browserify)))
 				//turned into commonjs & bundled with require()
 				.pipe(rename({dirname: 'js', basename: k}))
 				.pipe(gulp.dest(configure.output, {cwd:configure.root}))

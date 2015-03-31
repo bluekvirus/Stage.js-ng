@@ -7,7 +7,7 @@
  * 
  * 1. css: LESS -> CSS -> /{output}/css/main.css (+prefix, +clean)
  * 2. tpl: Templates (html) -> wrap into {name: content} -> /{output}/templates.json
- * 3. module: JS -> babel (es6) -> [browserify (commonjs bundle)] -> /{output}/app.js
+ * 3. modules: JS (es6) -> [browserify (commonjs bundle + babelify)] -> /{output}/app.js
  * 4. libs: Vendor/Shared util JS -> concatenate -> {output}/libs.js
  * 5. assets: Assets/* -> copy into /{output}/*, copy and re-dir/merge certain file/folder
  * 6. compress: Minify and gzip the *.js and *.css in the output folder.
@@ -52,6 +52,8 @@ less = require('gulp-less'),
 autoprefixer = require('gulp-autoprefixer'),
 through = require('through2'),
 gutil = require('gulp-util'),
+browserify = require('gulp-browserify'),
+babel = require('babelify'),
 //plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
 del = require('del');
@@ -74,7 +76,7 @@ console.log('Using configure:', argv.C.yellow);
 //default (without compress)
 //=======
 gulp.task('default', false, 
-	['clean', 'module', 'tpl', 'css', 'assets', 'libs'], 
+	['clean', 'modules', 'tpl', 'css', 'assets', 'libs'], 
 function defaultTask(){
 });
 
@@ -94,11 +96,27 @@ gulp.task('libs', 'Concatenate js libraries', function libsTask(){
 });
 
 
-//======
-//module (TBI)
-//======
-gulp.task('module', 'Compile js modules through es6', function jsTask(){
-	console.log(configure.modules);
+//=======
+//modules (jshint?)
+//=======
+gulp.task('modules', 'Compile js modules through es6', function jsTask(){
+	//console.log(configure.modules);
+	var merged = mergeStream();
+	_.forIn(configure.modules, function(v, k){
+		//v --> glob, k --> js target
+		merged.add(
+			gulp.src(v, {cwd: configure.root, read: false})
+				.pipe(browserify({
+					//insertGlobals : true, (process, __filename, __dirname, ...) skipped atm.
+					transform: babel.configure(configure.plugins.babel)
+				}))
+				//turned into commonjs & bundled with require()
+				.pipe(rename({dirname: 'js', basename: k}))
+				.pipe(gulp.dest(configure.output, {cwd:configure.root}))
+		);
+	});
+
+	return merged.pipe(size({showFiles: true}));
 });
 
 

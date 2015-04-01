@@ -51,6 +51,7 @@ uglify = require('gulp-uglify'),
 mincss = require('gulp-minify-css'), //using clean-css internally
 minhtml = require('gulp-minify-html'),
 filter = require('gulp-filter'),
+replace = require('gulp-replace'),
 less = require('gulp-less'),
 autoprefixer = require('gulp-autoprefixer'),
 through = require('through2'),
@@ -84,7 +85,7 @@ gulp.task('default', false,
 
 
 //=======
-//js (jshint?)
+//js (+jshint?)
 //=======
 gulp.task('js', 'Compile/Concat js modules(es6)/libs', function jsTask(){
 	//console.log(configure.js);
@@ -194,7 +195,7 @@ gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
 
 
 //========
-//compress
+//compress (+templates.json?)
 //========
 gulp.task('compress', 'Minify and Gzip the js/html/css files', function compressTask(){
 	//console.log(configure.production);
@@ -213,6 +214,7 @@ gulp.task('compress', 'Minify and Gzip the js/html/css files', function compress
 		.pipe(filters.css.restore())
 
 		.pipe(filters.html)
+		.pipe(replace(/(\.css|\.js)/g, '.min$1')) //ref the minified version in minified html.
 		.pipe(minhtml(configure.plugins['minify-html']))
 		.pipe(filters.html.restore())
 

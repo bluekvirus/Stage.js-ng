@@ -60,6 +60,7 @@ browserify = require('browserify'),
 babel = require('babelify'),
 //plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
+lazypipe = require('lazypipe'),
 del = require('del');
 
 //---------------Configure--------------
@@ -87,6 +88,25 @@ gulp.task('default', false,
 //=======
 //js (+jshint?)
 //=======
+var jspipe = {
+	concat: lazypipe()
+				.pipe(srcmaps.init).pipe(concat, 'tmp.js', {newLine: ';'})
+				.pipe(srcmaps.write), //(+sourcemap, size x3+)
+	bundle: lazypipe()
+				.pipe(through.obj, function(file, encode, cb){
+					//create browserify bundle stream
+					browserify(file.path, _.extend({
+						//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
+						transform: babel.configure(configure.plugins.babel),
+						debug: true, //(+sourcemap, size x3+)
+					}, configure.plugins.browserify))
+					//pass the entrypoint vinyl file down, with its content replaced by the bundle stream's
+					.bundle(function(err, content){
+						file.contents = content;
+						cb(null, file);
+					});
+				})
+};
 gulp.task('js', 'Compile/Concat js modules(es6)/libs', function jsTask(){
 	//console.log(configure.js);
 	var merged = mergeStream();
@@ -97,25 +117,11 @@ gulp.task('js', 'Compile/Concat js modules(es6)/libs', function jsTask(){
 				gulp.src(v, {cwd: configure.root})
 					//array: concat only
 					.pipe(size({showFiles: true, title: k + '.js:concat'}))
-					.pipe(srcmaps.init()) 
-					.pipe(concat('tmp.js', {newLine: ';'}))
-					.pipe(srcmaps.write()) //(+sourcemap, size x3+)
+					.pipe(jspipe.concat())
 				:
 				gulp.src(v, {cwd: configure.root})
 					//entrypoint: turned into commonjs & bundled with require()
-					.pipe(through.obj(function(file, encode, cb){
-						//create browserify bundle stream
-						browserify(file.path, _.extend({
-							//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
-							transform: babel.configure(configure.plugins.babel),
-							debug: true, //(+sourcemap, size x3+)
-						}, configure.plugins.browserify))
-						//pass the entrypoint vinyl file down, with its content replaced by the bundle stream's
-						.bundle(function(err, content){
-							file.contents = content;
-							cb(null, file);
-						});
-					}))
+					.pipe(jspipe.bundle())
 			)
 			.pipe(rename({dirname: 'js', basename: k}))
 			.pipe(gulp.dest(configure.output, {cwd:configure.root}))

@@ -33,6 +33,7 @@
     "gulp-util": "^3.0.4",
     "gulp-watch": "^4.2.2",
     "jshint-stylish": "^1.0.0",
+    "lazypipe": "^0.2.2",
     "lodash": "^3.6.0",
     "merge-stream": "^0.1.7",
     "through2": "^0.6.3",

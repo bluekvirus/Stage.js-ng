@@ -61,8 +61,8 @@ module.exports = {
 	//----------------watch-----------------
 	watching: false,
 
-	//-----------minified & gzipped?--------
-	//applies to all js, css and index.html
+	//-----------minified & gzipped---------
+	//with .min.html auto ref-ing .min.js/css
 	production: false,
 
 	//------------js (modules/libs)---------

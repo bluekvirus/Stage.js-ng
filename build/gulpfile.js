@@ -14,11 +14,11 @@
  * 		a. assets/* -> copy into /{output}/*
  * 		b. copy and re-dir/merge certain file/folder
  * 5. compress: minify and gzip the *.js and *.css in the output folder.
+ * 6. clean: clear the output folder.
  *
- * Optional:
+ * Built-in:
  * 
- * 6. watch: watching changes in the /src folder and trigger certain task(s)
- * 7. clean: clear the output folder.
+ * 7. watch: watching changes and re-run js, css and tpl tasks.
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
  *
@@ -56,7 +56,7 @@ less = require('gulp-less'),
 autoprefixer = require('gulp-autoprefixer'),
 through = require('through2'),
 gutil = require('gulp-util'),
-browserify = require('gulp-browserify'),
+browserify = require('browserify'),
 babel = require('babelify'),
 //plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
@@ -101,13 +101,21 @@ gulp.task('js', 'Compile/Concat js modules(es6)/libs', function jsTask(){
 					.pipe(concat('tmp.js', {newLine: ';'}))
 					.pipe(srcmaps.write()) //(+sourcemap, size x3+)
 				:
-				gulp.src(v, {cwd: configure.root, read: false})
+				gulp.src(v, {cwd: configure.root})
 					//entrypoint: turned into commonjs & bundled with require()
-					.pipe(browserify(_.extend({
-						//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
-						transform: babel.configure(configure.plugins.babel),
-						debug: true //(+sourcemap, size x3+)
-				}, configure.plugins.browserify)))
+					.pipe(through.obj(function(file, encode, cb){
+						//create browserify bundle stream
+						browserify(file.path, _.extend({
+							//insertGlobals : true, //(insert process, global, __filename, __dirname), gives size x10+!! thus skipped. 
+							transform: babel.configure(configure.plugins.babel),
+							debug: true, //(+sourcemap, size x3+)
+						}, configure.plugins.browserify))
+						//pass the entrypoint vinyl file down, with its content replaced by the bundle stream's
+						.bundle(function(err, content){
+							file.contents = content;
+							cb(null, file);
+						});
+					}))
 			)
 			.pipe(rename({dirname: 'js', basename: k}))
 			.pipe(gulp.dest(configure.output, {cwd:configure.root}))

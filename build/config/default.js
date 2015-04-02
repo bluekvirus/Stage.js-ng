@@ -66,7 +66,7 @@ module.exports = {
 
 	//------------js (modules/libs)---------
 	// 'entrypoint' compile & bundle as es6 modules (import, expose. re-process during `watch`)
-	// '[...]' as vanilla js concat (won't be re-process during `watch`)
+	// '[...]' as vanilla js concat (won't re-process during `watch`)
 	javascript: {
 		//app.js
 		app: 'src/main.js',
@@ -77,7 +77,6 @@ module.exports = {
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/director/build/director.js',
-			'libs/bower_components/ractive/ractive.js',
 		],
 	},
 

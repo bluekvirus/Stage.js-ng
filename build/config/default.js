@@ -14,11 +14,12 @@
  * 2. control aspects: 
  * 		dist path,
  * 		compress[minify, gzip],
- * 		watch [incremental build?],
  * 		js[es6, concat],
  * 		css,
  * 		template, 
- * 		assets (copy, re-dirname)
+ * 		assets (copy, re-dirname),
+ * 		watch
+ * 		
  *
  * Override (create another configure)
  * -----------------------------------
@@ -38,6 +39,7 @@
  * 2. Concatenated lib/vendor .js files can be used directly using their globally exposed vars.
  * 3. We embed sourcemaps inside compiled/concatenated js targets, thus resulting x3 file size.
  * 4. Minified js, css and html will not contain sourcemaps and comments (except for special / *!..* /)
+ * 5. Watch task only recompile js, less and tpl.html files, skipping concatenated js targets.
  *
  * Important Note
  * --------------
@@ -58,9 +60,6 @@ module.exports = {
 	//---------------dist path--------------
 	output: 'public',
 
-	//----------------watch-----------------
-	watching: false,
-
 	//-----------minified & gzipped---------
 	//with .min.html auto ref-ing .min.js/css
 	production: false,
@@ -68,7 +67,7 @@ module.exports = {
 	//------------js (modules/libs)---------
 	// 'entrypoint' as es6 modules (import, expose)
 	// '[...]' as vanilla js concat
-	js: {
+	javascript: {
 		//app.js
 		app: 'src/main.js',
 
@@ -87,7 +86,7 @@ module.exports = {
 	templates: ['src/**/*tpl.html'],
 
 	//-----------------style----------------
-	css: 'styles/base.less', // into base.css
+	stylesheet: 'styles/base.less', // into base.css
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is
@@ -131,4 +130,22 @@ module.exports = {
 		gzip: {}
 
 	},
+
+	//------------watch params--------------
+	//Don't change this unless sure about...
+	watch: {
+		usePolling: true,
+		delay: {
+			unit: 300, // ms
+			factor: { // unit * factor
+				poll: 1,
+				debounce: 2
+			}
+		},
+		//watch globs (different than the corresponding tasks' globs)
+		glob: {
+			js: 'src/**/*.js',
+			css: 'styles/**/*.less',
+		}
+	}
 };

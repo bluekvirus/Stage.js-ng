@@ -15,9 +15,6 @@
  * 		b. copy and re-dir/merge certain file/folder
  * 5. compress: minify and gzip the *.js and *.css in the output folder.
  * 6. clean: clear the output folder.
- *
- * Built-in:
- * 
  * 7. watch: watching changes and re-run js, css and tpl tasks.
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
@@ -61,6 +58,7 @@ babel = require('babelify'),
 //plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
 lazypipe = require('lazypipe'),
+chokidar = require('chokidar'),
 del = require('del');
 
 //---------------Configure--------------
@@ -88,6 +86,32 @@ gulp.task('default', false,
 //=======
 //js (+jshint?)
 //=======
+gulp.task('js', 'Compile/Concat js modules(es6)/libs', jsTask);
+function jsTask(compileonly){
+	//console.log(configure.javascript);
+	var merged = mergeStream();
+	_.forIn(configure.javascript, function(v, k){
+		//v --> entrypoint/array, k --> js target
+		if(compileonly && _.isArray(v)) return;
+		merged.add(
+			(_.isArray(v)?
+				gulp.src(v, {cwd: configure.root})
+					//array: concat only
+					.pipe(size({showFiles: true, title: k + '.js:concat'}))
+					.pipe(jspipe.concat())
+				:
+				gulp.src(v, {cwd: configure.root})
+					//entrypoint: turned into commonjs & bundled with require()
+					.pipe(jspipe.bundle())
+			)
+			.pipe(rename({dirname: 'js', basename: k}))
+			.pipe(gulp.dest(configure.output, {cwd:configure.root}))
+		);
+	});
+
+	return merged.pipe(size({showFiles: true, title: 'js'}));
+}
+//reusable js piples (using lazypipe)
 var jspipe = {
 	concat: lazypipe()
 				.pipe(srcmaps.init).pipe(concat, 'tmp.js', {newLine: ';'})
@@ -107,39 +131,18 @@ var jspipe = {
 					});
 				})
 };
-gulp.task('js', 'Compile/Concat js modules(es6)/libs', function jsTask(){
-	//console.log(configure.js);
-	var merged = mergeStream();
-	_.forIn(configure.js, function(v, k){
-		//v --> entrypoint/array, k --> js target
-		merged.add(
-			(_.isArray(v)?
-				gulp.src(v, {cwd: configure.root})
-					//array: concat only
-					.pipe(size({showFiles: true, title: k + '.js:concat'}))
-					.pipe(jspipe.concat())
-				:
-				gulp.src(v, {cwd: configure.root})
-					//entrypoint: turned into commonjs & bundled with require()
-					.pipe(jspipe.bundle())
-			)
-			.pipe(rename({dirname: 'js', basename: k}))
-			.pipe(gulp.dest(configure.output, {cwd:configure.root}))
-		);
-	});
-
-	return merged.pipe(size({showFiles: true, title: 'js'}));
-});
 
 
 //===
 //tpl (using through2 to transform/combine files in stream)
 //===
-gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
+gulp.task('tpl', 'Combine HTML templates/components', tplTask);
+function tplTask(){
 	//console.log(configure.templates);
 	var tpls = {}; // --> JSON.stringify() upon 'finish'
 	var file = new gutil.File({path: 'templates.json'});
 	return gulp.src(configure.templates, {cwd: configure.root})
+
 		.pipe(size({showFiles: true, title: 'tpl'}))
 		.pipe(through.obj(function(file, encode, cb){
 			//on 'file'
@@ -157,15 +160,16 @@ gulp.task('tpl', 'Combine HTML templates/components', function tplTask(){
 		}))
 		.pipe(size({showFiles: true, title: 'tpl'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
-});
+}
 
 
 //===
 //css
 //===
-gulp.task('css', 'Compile css from LESS', function cssTask(){
-	//console.log(configure.css);
-	return gulp.src(configure.css, {cwd: configure.root})
+gulp.task('css', 'Compile css from LESS', cssTask);
+function cssTask(){
+	//console.log(configure.stylesheet);
+	return gulp.src(configure.stylesheet, {cwd: configure.root})
 		.pipe(less({
 			paths: [
 				configure.root, 
@@ -178,13 +182,14 @@ gulp.task('css', 'Compile css from LESS', function cssTask(){
 		.pipe(rename({dirname: 'css'}))
 		.pipe(size({showFiles: true, title: 'css'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
-});
+}
 
 
 //======
 //assets
 //======
-gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
+gulp.task('assets', 'Copy/Re-dir assets', assetsTask);
+function assetsTask(){
 	//console.log(configure.assets);
 	var glob = [], renameMap = {};
 	_.each(configure.assets, function(a){
@@ -205,8 +210,46 @@ gulp.task('assets', 'Copy/Re-dir assets', function assetsTask(){
 	});
 
 	return merged.pipe(size({showFiles: true, title: 'assets'}));
-});
+}
 
+
+//========
+//watch (using chokidar)
+//========
+gulp.task('watch', 'Watching changes to src/style/template and rebuild', function watchTask(){
+	//shared configure
+	var cfg = configure.watch;
+	cfg._general = {
+		cwd: configure.root,
+		usePolling: cfg.usePolling,
+		interval: cfg.delay.factor.poll * cfg.delay.unit,
+		binaryInterval: 3 * cfg.delay.factor.poll * cfg.delay.unit //hidden factor = 3
+	};
+
+	//js
+	var jsTaskD = _.debounce(jsTask, cfg.delay.factor.debounce * cfg.delay.unit);
+	chokidar.watch(cfg.taskglob.js, cfg._general)
+	.on('all', function(e, path){
+		console.log('js', e.yellow, path);
+		jsTaskD('compileonly');
+	});
+
+	//tpl
+	var tplTaskD = _.debounce(tplTask, cfg.delay.factor.debounce * cfg.delay.unit);
+	chokidar.watch(cfg.taskglob.tpl || configure.templates, cfg._general)
+	.on('all', function(e, path){
+		console.log('tpl', e.yellow, path);
+		tplTaskD();
+	});
+
+	//css
+	var cssTaskD = _.debounce(cssTask, cfg.delay.factor.debounce * cfg.delay.unit);
+	chokidar.watch(cfg.taskglob.css, cfg._general)
+	.on('all', function(e, path){
+		console.log('css', e.yellow, path);
+		cssTaskD();
+	});
+});
 
 //========
 //compress (+templates.json?)

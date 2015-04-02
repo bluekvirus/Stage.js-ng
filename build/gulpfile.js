@@ -87,7 +87,7 @@ gulp.task('default', false,
 //js (+jshint?)
 //=======
 gulp.task('js', 'Compile/Concat js modules(es6)/libs', jsTask);
-function jsTask(compileonly){
+function jsTask(cb, compileonly){
 	//console.log(configure.javascript);
 	var merged = mergeStream();
 	_.forIn(configure.javascript, function(v, k){
@@ -228,15 +228,15 @@ gulp.task('watch', 'Watching changes to src/style/template and rebuild', functio
 
 	//js
 	var jsTaskD = _.debounce(jsTask, cfg.delay.factor.debounce * cfg.delay.unit);
-	chokidar.watch(cfg.taskglob.js, cfg._general)
+	chokidar.watch(cfg.glob.js, cfg._general)
 	.on('all', function(e, path){
 		console.log('js', e.yellow, path);
-		jsTaskD('compileonly');
+		jsTaskD(_.noop, 'compileonly');
 	});
 
 	//tpl
 	var tplTaskD = _.debounce(tplTask, cfg.delay.factor.debounce * cfg.delay.unit);
-	chokidar.watch(cfg.taskglob.tpl || configure.templates, cfg._general)
+	chokidar.watch(cfg.glob.tpl || configure.templates, cfg._general)
 	.on('all', function(e, path){
 		console.log('tpl', e.yellow, path);
 		tplTaskD();
@@ -244,7 +244,7 @@ gulp.task('watch', 'Watching changes to src/style/template and rebuild', functio
 
 	//css
 	var cssTaskD = _.debounce(cssTask, cfg.delay.factor.debounce * cfg.delay.unit);
-	chokidar.watch(cfg.taskglob.css, cfg._general)
+	chokidar.watch(cfg.glob.css, cfg._general)
 	.on('all', function(e, path){
 		console.log('css', e.yellow, path);
 		cssTaskD();

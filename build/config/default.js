@@ -61,12 +61,12 @@ module.exports = {
 	output: 'public',
 
 	//-----------minified & gzipped---------
-	//with .min.html auto ref-ing .min.js/css
+	// with .min.html auto ref-ing .min.js/css
 	production: false,
 
 	//------------js (modules/libs)---------
-	// 'entrypoint' as es6 modules (import, expose)
-	// '[...]' as vanilla js concat
+	// 'entrypoint' compile & bundle as es6 modules (import, expose. re-process during `watch`)
+	// '[...]' as vanilla js concat (won't be re-process during `watch`)
 	javascript: {
 		//app.js
 		app: 'src/main.js',
@@ -82,18 +82,18 @@ module.exports = {
 	},
 
 	//------------templates.json------------
-	// (put together with js modules under /src)
+	// put together with js modules under /src (re-combine during `watch`)
 	templates: ['src/**/*tpl.html'],
 
 	//-----------------style----------------
-	stylesheet: 'styles/base.less', // into base.css
+	// into base.css, (re-compile during `watch`)
+	stylesheet: 'styles/base.less', 
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is
 	//{key: value} --> copy & re-dir
 	//
-	//overlapping folder will be merged.
-	//
+	// overlapping folder will be merged.
 	assets: [
 		//glob (copy/exclude as is)
 		'assets/**/*',
@@ -107,7 +107,6 @@ module.exports = {
 	],
 
 	//----------gulp plugin configs---------
-	//
 	plugins: {
 
 		autoprefixer: {},

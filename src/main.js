@@ -1,5 +1,7 @@
 import banner from './components/banner/script';
 
 $(function(){
-	window.test = () => $('h1').html(banner.msg).addClass('test');
+	// This command is used to initialize some elements and make them work properly
+	$.material.init();
+
 });

@@ -77,8 +77,9 @@ module.exports = {
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/director/build/director.js',
-			'libs/bower_components/bootstrap-material-design/dist/material.js',
-			'libs/bower_components/bootstrap-material-design/dist/ripples.js'
+			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
+			'libs/bower_components/bootstrap-material-design/dist/js/material.js',
+			'libs/bower_components/bootstrap-material-design/dist/js/ripples.js'
 		],
 	},
 

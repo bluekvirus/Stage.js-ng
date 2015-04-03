@@ -77,6 +77,8 @@ module.exports = {
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/director/build/director.js',
+			'libs/bower_components/bootstrap-material-design/dist/material.js',
+			'libs/bower_components/bootstrap-material-design/dist/ripples.js'
 		],
 	},
 
@@ -101,7 +103,8 @@ module.exports = {
 		{
 			'libs/bower_components/modernizr/modernizr.js':'js',
 			'libs/bower_components/fontawesome/fonts/*':'fonts',
-			'libs/bower_components/bootstrap/dist/fonts/*': 'fonts'
+			'libs/bower_components/bootstrap/dist/fonts/*': 'fonts',
+			'libs/bower_components/bootstrap-material-design/dist/fonts/*': 'fonts'
 		},
 	],
 

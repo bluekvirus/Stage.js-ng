@@ -22,8 +22,8 @@
 		}
 	};
 
-	//load templates
-	app.com.ajax('templates.json').done(function(tpls){
+	//load templates (blocking)
+	app.com.ajax({ url: 'templates.json', async: false }).done(function(tpls){
 		app.templates = tpls;
 	});
 

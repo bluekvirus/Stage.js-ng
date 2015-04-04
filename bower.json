@@ -20,7 +20,8 @@
     "director": "~1.2.8",
     "bootstrap": "~3.3.4",
     "lodash": "~3.6.0",
-    "bootstrap-material-design": "~0.3.0"
+    "bootstrap-material-design": "~0.3.0",
+    "eventemitter2": "~0.4.14"
   },
   "devDependencies": {
     "mocha": "~2.1.0",

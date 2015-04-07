@@ -2,19 +2,27 @@
 
 	//setup 
 	//	ready e, 
-	//	routing(selector, pattern, listener)
+	//	routing(pattern[implied selector],  listener)
 	//	states
 	//	screen/scroll/key/click
-	//	init cb
 	//api
+	//	.config
+	//	.load (->e tpl.ready)
+	//	.init (->e mainview.setup, app.init)
+	//	.start (->e app.ready)
+	//	.navigate (->e app.navigate)
 	//	.com.ajax (v2)
-	//	.com.socket (websocket)
-	//	.com.peer (rtc)
+	//	[.com.socket (websocket)]
+	//	[.com.peer (rtc)]
 
 	//application object
 	var app = {
 		container: $('#app'),
-		router: Router(),
+		routes: {
+			'/:context/?([^\/]*)/?(.*)': function(ctx, item, rest){
+				app.coordinator.emit('app.navigate', ctx, item, rest);
+			}
+		},
 		coordinator: new EventEmitter({
 			delimiter: '.'
 		}),
@@ -36,32 +44,39 @@
 			});
 		},
 
-		//2. setup main view (override this!)
-		setup: function(){
-			app.container.html(app.templates['main.tpl.html']);
-			this.coordinator.emit('mainview.ready');
-		},
-
-		//3. init router & ui special
+		//2. setup main view, init router & $.plugins
 		init: function(){
-			this.router.init();
+			app.coordinator.emit('mainview.setup', app.container);
+			this.router = new Router(this.routes).init();
 			if($.material) $.material.init();
 			this.coordinator.emit('app.init');
 		},
 
-		//entry point
-		start: function(){
-			this.load();
-			this.setup();
-			this.init();
-			this.coordinator.emit('app.ready');
+		//3. navigation api
+		navigate: function(path){
+			return this.router.setRoute(path);
+		},
+
+		//entry point (support mobile ready event)
+		start: function(e){
+			var that = this;
+			$(document).on(e || 'ready', function(){
+				that.load();
+				that.init();
+				that.coordinator.emit('app.ready');
+			});
 		}
 	};
 
-	//kick start
-	$(document).on('ready', function(){
-		app.start();
-	});
+	//fix the coordinator.emit (+ event name, if no args)
+	var _oldemit = app.coordinator.emit;
+	app.coordinator.emit = function(){
+		if(arguments.length === 1)
+			_oldemit.call(app.coordinator, arguments[0], arguments[0]);
+		else
+			_oldemit.apply(app.coordinator, arguments);
+	};
+	
 
 	//expose app as global
 	window.app = app;

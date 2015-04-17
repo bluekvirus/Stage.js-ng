@@ -2,18 +2,12 @@
  * The minimum app infrastructure for common SPA bootup.
  * (*requires lodash, jQuery, director and EventEmitter2)
  *
+ * 
  * Process
  * -------
  * config -> load(tpl, i18n, ...) -> init(main view, $plugins, screen event, ...) -> ready
+ *
  * 
- * Core
- * -------
- * - main container 
- * - templates (cache)
- * - default routing (pattern[implied selector],  listener[forward event])
- * - coordinator (central event emitter)
- * - [states]
- * 	
  * APIs
  * -------
  * - .config
@@ -29,6 +23,18 @@
  * - .coordinator.once
  * - .coordinator.many
  *
+ *
+ * Properties
+ * ----------
+ * - .$container
+ * - .templates
+ * - .routes
+ * - .router
+ * - .coordinator
+ * - .com
+ * - [.state]
+ *
+ * 
  * Bootup
  * -------
  * setup/extend (use app.coordinator in main.js)
@@ -49,7 +55,51 @@
  *  	  console.log('@context', ctx, '@item', item, '@rest', rest);
  *      });
  *  ```
- *  
+ *
+ * 
+ * Navigation (default)
+ * ----------
+ * If you haven't changed the navigation implementation, here is the default behavior.
+ * Each time the hash portion (/#...) changes a default navigation event will be triggered.
+ * Listen to the `app.navigation` event will provide you with 3 unique params for determining
+ * content on screen:
+ * - context -- e.g Home, Products, About or Dashboard, User, Configurations...
+ * - item -- e.g anything that's level 2 in a context
+ * - rest -- e.g view1,view2,view3 suggesting what's currently showing within level 2
+ *
+ * Unlike `context` and `item`, `rest` can be anything you want including the `/` chars, it means
+ * the rest of the hash uri.
+ *
+ * The default navigation mechanism does NOT include actual view handling and layout manipulation.
+ * Implement yours in the `app.navigation` listener.
+ *
+ * 
+ * View Adaptors (not included)
+ * -------------
+ * Normally you would need to have at least one View adaptor loaded to enhance your html templates. 
+ * It wrapps a View lib/engine (html,js object to view) that has layout management, interaction hooks
+ * and transition control.
+ *
+ *
+ * Form Generators (not included)
+ * ---------------
+ * It would be a lot easier if you can generate form template and conditional control based on the 
+ * form data itself. Ideally this could be done by:
+ * a. guess based on property types of a js object. (e.g {...}.form())
+ * b. extract metadata from the server side app data definition as schema (e.g {...}.form({schema}))
+ *
+ * Obviously, a and b should be combined and a default list of html editors and wraps maintained.
+ *
+ *
+ * Data Path
+ * ---------
+ * Use `app.com.ajax` ($.ajax) or add your own into `app.com`
+ *
+ *
+ * App States (TBI)
+ * ----------
+ * state machine (`app.state`)
+ * 
  * 
  * @author Tim Lauv <bluekvirus@gmail.com>
  * @created 2015.04.06
@@ -85,7 +135,7 @@
 			//a. load templates.json into app.templates.
 			this.com.ajax({ url: 'templates.json', async: false }).done(function(tpls){
 				app.templates = app.templates?_.merge(app.templates, tpls):tpls;
-				app.coordinator.trigger('tpl.ready'); //--> [*required if building web componets]
+				app.coordinator.trigger('tpl.ready'); //--> [*required if building web components]
 			});
 
 			this.coordinator.trigger('app.load'); //--> [extend]

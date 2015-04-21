@@ -55,7 +55,9 @@
  *  	  console.log('@context', ctx, '@item', item, '@rest', rest);
  *      });
  *  ```
- *
+ * Default implementation has the templates.json loading in synced ajax mode, which means the
+ * `tpl.ready` will always be fired before the `app.load` extension point.
+ * 	
  * 
  * Navigation (default)
  * ----------
@@ -74,21 +76,27 @@
  * Implement yours in the `app.navigation` listener.
  *
  * 
- * View Adaptors (not included)
- * -------------
- * Normally you would need to have at least one View adaptor loaded to enhance your html templates. 
+ * View Manager/Engine (not included)
+ * -------------------
+ * Normally you would need to have at least one View manager loaded to enhance your html templates. 
  * It wrapps a View lib/engine (html,js object to view) that has layout management, interaction hooks
- * and transition control.
+ * and transition control. Note that you should always bridge the apis of the underlying view engine 
+ * whenever possible to minimize the cost in case of a engine swap.
+ *
+ * concept: js object (listeners) -> view
  *
  *
- * Form Generators (not included)
- * ---------------
+ * Form Generator (not included)
+ * --------------
  * It would be a lot easier if you can generate form template and conditional control based on the 
- * form data itself. Ideally this could be done by:
+ * form data (or schema) itself. Ideally this could be done by:
  * a. guess based on property types of a js object. (e.g {...}.form())
  * b. extract metadata from the server side app data definition as schema (e.g {...}.form({schema}))
  *
  * Obviously, a and b should be combined and a default list of html editors and wraps maintained.
+ *
+ * concept: html <input>, <select>, <textarea> + customizable wrapper = form editor tpl
+ * concept: js object (data/schema) + form skeleton (fieldset/editor positions) = form tpl
  *
  *
  * Data Path

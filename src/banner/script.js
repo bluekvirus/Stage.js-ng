@@ -1,3 +1,5 @@
 export default {
-	msg: 'Hello World!'
+	data: {
+		msg: 'I am Banner!'
+	}
 };

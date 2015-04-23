@@ -4,8 +4,14 @@
  * Purpose
  * -------
  * 1. auto convert templates to web components (<custom tags>)
- * 2. hide Ractive global class and use app.view({...}) instead
+ * 2. hide Ractive global class and use app.ve.view({...}) instead
  *
+ * Plugins (to app)
+ * ----------------
+ * app.ve
+ * app.ve.view
+ * app.ve.components
+ * 
  *
  * Cheatsheets
  * -----------
@@ -22,7 +28,9 @@
  * @created 2015.04.22
  */
 
-(function(_, $, app){
+(function(_, $, app, Ractive){
+	app.ve = {};
+	Ractive.DEBUG = app.param('debug', false);
 
 	//convert templates into web components
 	app.coordinator.on('tpl.ready', function(){
@@ -36,12 +44,12 @@
 			});
 		});
 
-		app.components = Ractive.components;
+		app.ve.components = Ractive.components;
 	});
 
 	//view api
-	app.view = function(configure){
+	app.ve.view = function(configure){
 
 	};
 
-})(_, jQuery, Application);
+})(_, jQuery, Application, Ractive);

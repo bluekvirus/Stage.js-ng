@@ -69,7 +69,7 @@ module.exports = {
 	// '[...]' as vanilla js concat (won't re-process during `watch`)
 	javascript: {
 		//app.js
-		app: 'src/main.js',
+		app: 'src/entrypoint.js',
 
 		//libs.js
 		libs: [

@@ -22,6 +22,9 @@
  * - .coordinator.off
  * - .coordinator.once
  * - .coordinator.many
+ * - .param (get single or all of ?... search string params in url)
+ * - .debug (activate when ?debug=true, replacing console.log calls)
+ * - .throw (same as throwing an exception)
  *
  *
  * Properties
@@ -133,6 +136,7 @@
 			ajax: $.ajax
 		},
 		//templates: {},
+		_cache: {},
 
 		//0. config (careful, it will override app it self)
 		config: function(newcfg){
@@ -186,6 +190,36 @@
 		navigate: function(path){
 			return this.router.setRoute(path);
 		},
+
+
+		//debug logging/exception throwing shortcut
+		param: function(key, defaultval){
+			//return single param value in the ?... search string in url or all of them.
+			//-------
+			// Gotcha: If you modify the ?... query string without hitting enter, params won't change.
+			//-------
+			if(app._cache.searchstring !==  window.location.search.substring(1)){
+				var params = {};
+				app._cache.searchstring = window.location.search.substring(1);
+				_.each(app._cache.searchstring.split('&'), function(pair){
+					pair = pair.split('=');
+					params[pair[0]] = pair[1];
+				});
+				app._cache.params = params;
+			}
+			if(key)
+				return _.isUndefined(app._cache.params[key])? defaultval : app._cache.params[key];
+			return app._cache.params;
+		},
+		debug: function(){
+			//as console.log wrapper
+			if(this.param('debug') === 'true')
+				return console.log.apply(console.log, arguments);
+		},
+		throw: function(e){
+			//e can be string, number or an object with .name and .message
+			throw e;
+		}
 	};
 
 	//enhance the coordinator.emit (+ event name, if no args, + trigger, fire as alias)

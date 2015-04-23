@@ -125,7 +125,9 @@
 			}
 		},
 		coordinator: new EventEmitter({
-			delimiter: '.'
+			wildcard: true, //enable a.* and a.*.c as event name
+			delimiter: '.', //in between name segments (for wildcard matching)
+			maxListeners: 10 //per event
 		}),
 		com: {
 			ajax: $.ajax
@@ -210,7 +212,7 @@
 	
 
 	//expose globals
-	window.app = app;
+	window.Application = window.app = app;
 	window.$window = $(window);
 	window.$document = $(document);
 

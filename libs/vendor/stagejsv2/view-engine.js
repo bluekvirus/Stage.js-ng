@@ -47,20 +47,20 @@
 		});
 
 		_.each(app.templates, function(tpl, filename){
-			var componentPath = filename.split('.tpl.html')[0];
+			var componentPath = filename.split('tpl.html')[0];
 			componentPath = _.trimLeft(componentPath, 'components')/*Hardcode!*/;
 			app.debug(filename, '=>', componentPath);
 
+			var name = _.capitalize(_.camelCase(componentPath));
 			RactiveUtil.make(tpl, {
 				url: filename,
-				loadImport: function(name, path, parentUrl, cb){
+				loadImport: function(tag, path, parentUrl, cb){
 
-					//TBI: check if this works for nested components.
-
-					cb(app.templates[path]);
+					//TBI: Not working atm for nested components.
+					app.debug('sub-comp:', tag, path, parentUrl);
+					cb(app.templates[name + tag]);
 				}
 			}, function(component){
-				var name = _.capitalize(_.camelCase(componentPath));
 				Ractive.components[name] = component;
 				app.debug('component ready:', name);
 				done();

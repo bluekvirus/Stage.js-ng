@@ -22,34 +22,70 @@
  * -------------
  * http://docs.ractivejs.org/latest/options
  * http://docs.ractivejs.org/latest/advanced-configuration
+ *
+ * 
+ * Gotcha
+ * ------
+ * Hardcode: Remember to put your Ractive components *.tpl.html under 'src/components'
  * 
  * 
  * @author Tim Lauv <bluekvirus@gmail.com>
  * @created 2015.04.22
  */
 
-(function(_, $, app, Ractive){
+(function(_, $, app, Ractive, RactiveUtil){
 	app.ve = {};
 	Ractive.DEBUG = app.param('debug', false);
+	RactiveUtil.init(Ractive);
 
+	//-----------------hooks into app infrastructure-------------------
 	//convert templates into web components
-	app.coordinator.on('tpl.ready', function(){
-		_.each(app.templates, function(tpl, name){
-			name = _.trimRight(name, 'tpl.html');
-			Ractive.components[_.capitalize(_.camelCase(name))] = Ractive.extend({
-				template: tpl
+	app.coordinator.on('app.load', function(){
 
-				//TBI: need to offer a way to later combine component js (loaded through es6 in main.js) into it.
-				
+		var done = _.after(_.size(app.templates), function(){
+			app.coordinator.trigger('app.loaded');
+		});
+
+		_.each(app.templates, function(tpl, filename){
+			var componentPath = filename.split('.tpl.html')[0];
+			componentPath = _.trimLeft(componentPath, 'components')/*Hardcode!*/;
+			app.debug(filename, '=>', componentPath);
+
+			RactiveUtil.make(tpl, {
+				url: filename,
+				loadImport: function(name, path, parentUrl, cb){
+
+					//TBI: check if this works for nested components.
+
+					cb(app.templates[path]);
+				}
+			}, function(component){
+				var name = _.capitalize(_.camelCase(componentPath));
+				Ractive.components[name] = component;
+				app.debug('component ready:', name);
+				done();
 			});
 		});
 
 		app.ve.components = Ractive.components;
 	});
 
+	//setup main view
+	app.coordinator.on('app.initialize', function(){
+		new app.ve.components.Main({el: app.$container}); 
+		app.coordinator.trigger('app.initialized');
+	});
+
+	//----------------apis enhancement to app-------------------------
 	//view api
 	app.ve.view = function(configure){
-
+		return new Ractive(configure);
 	};
 
-})(_, jQuery, Application, Ractive);
+	//component api
+	app.ve.component = function(name, configure){
+		Ractive.components[name] = Ractive.extend(configure);
+		return app.ve.components[name];
+	};
+
+})(_, jQuery, Application, Ractive, rcu);

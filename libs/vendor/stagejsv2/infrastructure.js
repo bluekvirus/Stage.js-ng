@@ -11,9 +11,10 @@
  * APIs
  * -------
  * - .config
- * - .load (->e tpl.ready, app.load)
- * - .init (->e app.setmainview, app.init)
- * - .start (->e app.ready)
+ * - ._load (->e app.load, requires firing app.loaded in hooks)
+ * - ._init (->e app.initialize, requires firing app.initialized in hooks)
+ * - ._ready (->e app.ready)
+ * - .start (<ready event>, [handshake-mode?]) - entrypoint
  * - .navigate (->e app.navigate)
  * - .com.ajax (v2)
  * - [.com.socket (websocket)]
@@ -42,24 +43,24 @@
  * -------
  * setup/extend (use app.coordinator in main.js)
  * ------------->----------->----------------->----------->-------------->---------->
- * 	*tpl.ready, 			*app.setmainview, 			  *app.navigate, 
- *  			[app.load], 				  [app.init], 				 [app.ready]			
+ * 	 						setup app.$container, *app.navigate, 
+ *  [app.load], [app.init], 			   		  				[app.ready]			
  *  
  *  * means the event is important and should have a listener in main.js
  *  ```
  *  	//main.js - example
  *   	app.start();
  *    	
- *    	app.coordinator.on('app.setmainview', function($ct){
+ *    	app.coordinator.on('app.initialize', function($ct){
  *  	  $ct.html(app.templates['main.tpl.html']);
+ *  	  app.coordinator.trigger('app.initialized');
  *     	});
  *      
  *      app.coordinator.on('app.navigate', function(ctx, item, rest){
  *  	  console.log('@context', ctx, '@item', item, '@rest', rest);
  *      });
  *  ```
- * Default implementation has the templates.json loading in synced ajax mode, which means the
- * `tpl.ready` will always be fired before the `app.load` extension point.
+ * Default implementation has the templates.json loading in synced ajax mode;
  * 	
  * 
  * Navigation (default)
@@ -143,26 +144,20 @@
 			_.merge(this, newcfg);
 		},
 
-		//1. load templates/components
-		load: function(){ //--> [override]
+		//1. load external templates/components
+		_load: function(){ //--> [override]
 			//default *load* implementation:
 			//a. load templates.json into app.templates.
 			this.com.ajax({ url: 'templates.json', async: false }).done(function(tpls){
 				app.templates = app.templates?_.merge(app.templates, tpls):tpls;
-				app.coordinator.trigger('tpl.ready'); //--> [*required if building web components]
 			});
-
 			this.coordinator.trigger('app.load'); //--> [extend]
 		},
 
-		//2. setup main view, init router & $.plugins
-		init: function(){ //--> [override]
+		//2. runtime initialization
+		_init: function(){ //--> [override]
 			//default *init* implementation:
-			//a. mount main view into app container
-			app.coordinator.trigger('app.setmainview', app.$container); //--> <*required>
-			//b. init material design plugins
-			if($.material) $.material.init();
-			//c. forward window resize, scroll events
+			//a. forward window resize, scroll events
 			$window.resize(function(){
 				app.coordinator.trigger('app.resize');
 			});
@@ -170,23 +165,39 @@
 				app.coordinator.trigger('app.scroll');
 			});
 
-			this.coordinator.trigger('app.init'); //--> [extend]
+			this.coordinator.trigger('app.initialize'); //--> [extend]
 		},
 
-		//3. entry point (support mobile ready event)
+		//3. kickoff navigation
+		_ready: function(){
+			//kick off navigation
+			this.router = new Router(this.routes).init();
+			this.coordinator.trigger('app.ready'); //--> [extend]
+		},
+
+		//entry point (support mobile ready event, and pause-by-each-step mode)
 		start: function(e){ //--> [customizable mobile ready e]
 			var that = this;
 			$document.on(e || 'ready', function(){
-				that.load();
-				that.init();
-				//kick off navigation
-				that.router = new Router(that.routes).init();
-
-				that.coordinator.trigger('app.ready'); //--> [extend]
+				if(that.coordinator.listeners('app.load').length === 0)
+					that.coordinator.on('app.load', function(){
+						that.coordinator.trigger('app.loaded');
+					});
+				if(that.coordinator.listeners('app.initialize').length === 0)
+					that.coordinator.on('app.initialize', function(){
+						that.coordinator.trigger('app.initialized');
+					});
+				that.coordinator.many('app.loaded', that.coordinator.listeners('app.load').length, function(){
+					that._init();
+				});
+				that.coordinator.many('app.initialized', that.coordinator.listeners('app.init').length, function(){
+					that._ready();
+				});
+				that._load();
 			});
 		},
 
-		//3+. expose navigation api
+		//expose navigation api
 		navigate: function(path){
 			return this.router.setRoute(path);
 		},

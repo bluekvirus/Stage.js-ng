@@ -81,9 +81,11 @@ module.exports = {
 			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
 			'libs/bower_components/bootstrap-material-design/dist/js/material.js',
 			'libs/bower_components/bootstrap-material-design/dist/js/ripples.js',
-			'libs/bower_components/ractive/ractive.js',
 			//-----------------------------------------
 			'libs/vendor/stagejsv2/infrastructure.js',
+			//-----------------------------------------
+			'libs/bower_components/ractive/ractive.js',
+			'libs/vendor/ractive-rcu/rcu.js',
 			'libs/vendor/stagejsv2/view-engine.js'
 		],
 	},

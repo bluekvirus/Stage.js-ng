@@ -1,0 +1,11 @@
+<!-- main template of your app -->
+<Banner></Banner>
+<ContentWrap></ContentWrap>
+
+<script>
+	component.exports = {
+		onrender: function(){
+			if($.material) $.material.init();
+		}
+	};
+</script>

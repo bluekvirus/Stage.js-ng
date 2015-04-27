@@ -4,12 +4,13 @@
  * Purpose
  * -------
  * 1. auto convert templates to web components (<custom tags>)
- * 2. hide Ractive global class and use app.ve.view({...}) instead
+ * 2. hide Ractive global class and use `app.ve.view({...})` instead
  *
  * Plugins (to app)
  * ----------------
  * app.ve
  * app.ve.view
+ * app.ve.component
  * app.ve.components
  * 
  *
@@ -26,7 +27,17 @@
  * 
  * Gotcha
  * ------
- * Hardcode: Remember to put your Ractive components *.tpl.html under 'src/components'
+ * 1. Remember to put your Ractive components (`*.tpl.html`) under `src/components`
+ * 2. `<component>/tpl.html` means the main template of `<component>`, sub-components 
+ * 	  can be ref-ed using `<ComponentSubSub...>` in the main template. the original 
+ * 	  `<link ref=...>` dep loading is removed for simpler component registeration. 
+ * 	  In other words, nested components will reflect their origin/relation ONLY in the name.
+ *
+ * 
+ * Hardcode
+ * --------
+ * 1. components must be named `*.tpl.html`
+ * 2. components must be under `src/components`
  * 
  * 
  * @author Tim Lauv <bluekvirus@gmail.com>
@@ -35,13 +46,20 @@
 
 (function(_, $, app, Ractive, RactiveUtil){
 	app.ve = {};
+
+	//----------------patching Ractive---------------------------------
 	Ractive.DEBUG = app.param('debug', false);
+	_.extend(Ractive.prototype, {
+		trigger: Ractive.prototype.fire,
+		emit: Ractive.prototype.fire
+	});
 	RactiveUtil.init(Ractive);
 
 	//-----------------hooks into app infrastructure-------------------
 	//convert templates into web components
 	app.coordinator.on('app.load', function(){
 
+		//since rcu uses promise, we need to wait for all conversions to complete
 		var done = _.after(_.size(app.templates), function(){
 			app.coordinator.trigger('app.loaded');
 		});
@@ -55,10 +73,7 @@
 			RactiveUtil.make(tpl, {
 				url: filename,
 				loadImport: function(tag, path, parentUrl, cb){
-
-					//TBI: Not working atm for nested components.
-					app.debug('sub-comp:', tag, path, parentUrl);
-					cb(app.templates[name + tag]);
+					app.throw('dependency <link> tag not supported.');
 				}
 			}, function(component){
 				Ractive.components[name] = component;
@@ -77,14 +92,16 @@
 	});
 
 	//----------------apis enhancement to app-------------------------
-	//view api
+	//view api (-> instance)
 	app.ve.view = function(configure){
 		return new Ractive(configure);
 	};
 
-	//component api
+	//component api (-> class)
 	app.ve.component = function(name, configure){
-		Ractive.components[name] = Ractive.extend(configure);
+		if(app.ve.components[name]) app.throw('Component name already registered: ' + name);
+
+		app.ve.components[name] = Ractive.extend(configure);
 		return app.ve.components[name];
 	};
 

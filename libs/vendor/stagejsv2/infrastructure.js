@@ -41,27 +41,43 @@
  * 
  * Bootup
  * -------
- * setup/extend (use app.coordinator in main.js)
- * ------------->----------->----------------->----------->-------------->---------->
- * 	 						setup app.$container, *app.navigate, 
- *  [app.load], [app.init], 			   		  				[app.ready]			
+ * ###1. Setup (entrypoint.js)
+ * ----------->----------->--------------->--------->
+ * 	 					   *app.navigate, 
+ * [app.load], [app.init], 			      [app.ready]			
  *  
- *  * means the event is important and should have a listener in main.js
- *  ```
- *  	//main.js - example
- *   	app.start();
- *    	
- *    	app.coordinator.on('app.initialize', function($ct){
- *  	  $ct.html(app.templates['main.tpl.html']);
- *  	  app.coordinator.trigger('app.initialized');
- *     	});
+ * ####Sample Code:
+ * ```
+ * app.config({...}).start([ready event]);
  *      
- *      app.coordinator.on('app.navigate', function(ctx, item, rest){
- *  	  console.log('@context', ctx, '@item', item, '@rest', rest);
- *      });
- *  ```
- * Default implementation has the templates.json loading in synced ajax mode;
- * 	
+ * app.coordinator.on('app.navigate', function(ctx, item, rest){
+ * 	console.log('@context', ctx, '@item', item, '@rest', rest);
+ * });
+ * ```
+ * 
+ * ###2. Extend (entrypoint.js)
+ *
+ * ####Sample Code:
+ * ```
+ * //Opt A. through events (recommended)
+ * //load
+ * app.coordinator.on('app.load', function(){
+ * 	...
+ * 	app.coordinator.trigger('app.loaded');
+ * });
+ * 
+ * //initialize
+ * app.coordinator.on('app.initialize', function($ct){
+ * 	$ct.html(app.templates['main.tpl.html']);
+ *  app.coordinator.trigger('app.initialized');
+ * });
+ *
+ * //Opt B. override _.load, _.init
+ * ```
+ * Gotcha: If you listen to `app.load` or/and `app.initialize` make sure you emit/trigger/fire 
+ * the `app.loaded` or/and `app.initialize` at the end of your listener. This is required for 
+ * EVERY listener to these 2 events.
+ * 
  * 
  * Navigation (default)
  * ----------
@@ -141,7 +157,7 @@
 
 		//0. config (careful, it will override app it self)
 		config: function(newcfg){
-			_.merge(this, newcfg);
+			return _.merge(this, newcfg);
 		},
 
 		//1. load external templates/components

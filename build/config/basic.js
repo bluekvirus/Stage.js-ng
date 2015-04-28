@@ -11,6 +11,6 @@ config.javascript.libs.push(
 	'libs/vendor/stagejsv2/view-engine-basic.js'
 );
 
-config.templates = ['src/vanilla/**/*.mt.html'];
+config.templates = ['src/vanilla/**/*.mst.html'];
 
 module.exports = config; 

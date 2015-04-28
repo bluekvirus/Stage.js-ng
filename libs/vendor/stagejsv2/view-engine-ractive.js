@@ -27,17 +27,15 @@
  * 
  * Gotcha
  * ------
- * 1. Remember to put your Ractive components (`*.tpl.html`) under `src/components`
- * 2. `<component>/tpl.html` means the main template of `<component>`, sub-components 
- * 	  can be ref-ed using `<ComponentSubSub...>` in the main template. the original 
- * 	  `<link ref=...>` dep loading is removed for simpler component registeration. 
- * 	  In other words, nested components will reflect their origin/relation ONLY in the name.
+ * `<component>/index.ractive.html` means the main template of `<component>`, sub-components 
+ * can be ref-ed using `<ComponentSubSub...>` in the main template. the original 
+ * `<link ref=...>` dep loading is removed for simpler component registeration. 
+ * In other words, nested components will reflect their origin/relation ONLY in the name.
  *
  * 
  * Hardcode
  * --------
- * 1. components must be named `*.tpl.html`
- * 2. components must be under `src/components`
+ * 1. components must be named `*.ractive.html`
  * 
  * 
  * @author Tim Lauv <bluekvirus@gmail.com>
@@ -65,8 +63,8 @@
 		});
 
 		_.each(app.templates, function(tpl, filename){
-			var componentPath = filename.split('tpl.html')[0];
-			componentPath = _.trimLeft(componentPath, 'components')/*Hardcode!*/;
+			var componentPath = filename.replace('.ractive.html', '')/*Hardcode!*/;
+			if(_.endsWith(componentPath, 'index')) componentPath = componentPath.replace('index', '');
 			app.debug(filename, '=>', componentPath);
 
 			var name = _.capitalize(_.camelCase(componentPath));

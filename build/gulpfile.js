@@ -66,7 +66,7 @@ del = require('del');
 var argv = require('yargs').option('C', {
 	alias: 'config',
 	describe: 'Specify a customized configure file to override base ones.',
-	default: 'default'
+	default: '_base'
 }).argv;
 // load the targeted configure.
 var configure = require(path.join(__dirname, 'config', argv.C));

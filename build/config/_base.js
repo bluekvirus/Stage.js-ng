@@ -78,21 +78,19 @@ module.exports = {
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/director/build/director.js',
 			'libs/bower_components/eventemitter2/lib/eventemitter2.js',
-			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
-			'libs/bower_components/bootstrap-material-design/dist/js/material.js',
-			'libs/bower_components/bootstrap-material-design/dist/js/ripples.js',
 			//-----------------------------------------
 			'libs/vendor/stagejsv2/infrastructure.js',
 			//-----------------------------------------
-			'libs/bower_components/ractive/ractive.js',
-			'libs/vendor/ractive-rcu/rcu.js',
-			'libs/vendor/stagejsv2/view-engine.js'
+			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
+			'libs/bower_components/bootstrap-material-design/dist/js/material.js',
+			'libs/bower_components/bootstrap-material-design/dist/js/ripples.js',
+
 		],
 	},
 
 	//------------templates.json------------
 	// put together with js modules under /src (re-combine during `watch`)
-	templates: ['src/**/*tpl.html'],
+	templates: ['src/**/*.html'],
 
 	//-----------------style----------------
 	// into base.css, (re-compile during `watch`)

@@ -22,7 +22,8 @@
     "lodash": "~3.7.x",
     "bootstrap-material-design": "~0.3.x",
     "eventemitter2": "~0.4.x",
-    "ractive": "~0.7.2"
+    "ractive": "~0.7.2",
+    "mustache": "~2.0.0"
   },
   "devDependencies": {
     "mocha": "~2.2.x",

@@ -86,7 +86,7 @@ gulp.task('default', false,
 //=======
 //js (+jshint?)
 //=======
-gulp.task('js', 'Compile/Concat js modules(es6)/libs', jsTask);
+gulp.task('js', 'Compile/Concat js modules(es6)/libs', ['tpl'], jsTask);
 function jsTask(cb, compileonly){
 	//console.log(configure.javascript);
 	var merged = mergeStream();

@@ -240,7 +240,7 @@
 		},
 		debug: function(){
 			//as console.log wrapper
-			if(this.param('debug') === 'true')
+			if(app.param('debug') === 'true')
 				return console.log.apply(console.log, arguments);
 		},
 		throw: function(e){

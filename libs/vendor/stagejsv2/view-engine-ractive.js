@@ -6,6 +6,7 @@
  * 1. auto convert templates to web components (<custom tags>)
  * 2. hide Ractive global class and use `app.ve.view({...})` instead
  *
+ * 
  * Plugins (to app)
  * ----------------
  * app.ve
@@ -43,7 +44,7 @@
  */
 
 (function(_, $, app, Ractive, RactiveUtil){
-	app.ve = {};
+	app.ve = {name: 'Ractive'};
 
 	//----------------patching Ractive---------------------------------
 	Ractive.DEBUG = app.param('debug', false);

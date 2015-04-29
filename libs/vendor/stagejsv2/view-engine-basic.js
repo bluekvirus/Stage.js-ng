@@ -162,7 +162,8 @@
 
 			B.prototype = new View(); //logic-free constructor
 			_.extend(B.prototype, configure);
-			_.extend(B, View, statics);
+			_.extend(B, View, statics); 
+			//note that `prototype` and `constructor` are non-enumerable, thus won't be copied by _.extend()
 
 			B.prototype.constructor = B;
 

@@ -15,6 +15,11 @@
  * app.ve.components
  * 
  *
+ * Use of View
+ * -----------
+ * see cheatsheets and documentation below
+ * 
+ * 
  * Cheatsheets
  * -----------
  * http://ricostacruz.com/cheatsheets/ractive.html
@@ -81,7 +86,7 @@
 			});
 		});
 
-		app.ve.components = Ractive.components;
+		app.ve.components = Ractive.components || {};
 	});
 
 	//setup main view

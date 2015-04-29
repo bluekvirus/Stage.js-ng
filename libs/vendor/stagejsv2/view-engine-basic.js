@@ -6,6 +6,21 @@
  * app.ve
  * app.ve.view
  * $(el).data('view')
+ *
+ *
+ * Use of View
+ * -----------
+ * 1. new View({
+ * 		template: [name],
+ * 		[init]: function(){...}
+ * 		[$el]:
+ * 		[data]:
+ * 		[events]:
+ * })
+ * 2. view.render(data, [$el])
+ * 3. view.on/trigger/once/off()
+ * 4. view.teardown()
+ * 5. View.extend({...})
  * 
  *
  * Life cycle
@@ -50,45 +65,46 @@
 
 	//--------------------------------View class definition---------------------------------
 	//.template, .$el, .data, init() .render(e), .teardown(e), .events, .once/on/off/trigger()
-	//constructor
+	//constructor (logic-free)
 	var View = function(options){
 		this._options = options || {};
-		//required
-		if(!options.template) app.throw('View definition requires a template!');
-		options.template = _.endsWith('.mst.html')?options.template:(options.template + '.mst.html');
-		if(!app.templates[options.template]) app.throw('Template not found! ' + options.template);
-		Mustache.parse(app.templates[options.template]);
-		this.template = app.templates[options.template];
 		
 		//optional
-		this.$el = options.$el;
-		this.data = options.data;
-		this.init = options.init || options.initialize || this.init;
+		this.$el = this._options.$el || this.$el;
+		this.data = this._options.data || this.data;
+		this.init = this._options.init || this._options.initialize || this.init;
+		this.events = this._options.events || this.events;
+		this.template = this._options.template || this.template;
 
 		//extension point
-		this.init(options);
+		this.init(this._options);
 	};
 	//member methods
 	_.extend(View.prototype, {
 		init: _.noop,
 
 		render: function(datanconfig, $el){
+
+			//check the template first!
+			if(!this.template) app.throw('View definition requires a template!');
+			this.template = _.endsWith('.mst.html')?this.template:(this.template + '.mst.html');
+			if(!app.templates[this.template]) app.throw('Template not found! ' + this.template);			
 			
 			this.$el = $el || this.$el;
 			this.data = datanconfig || this.data;
 
-			var content = Mustache.render(this.template, this.data);
+			var content = Mustache.render(app.templates[this.template], this.data);
 
 			if(this.$el) {
 				//teardown previous view if template is different.
 				var meta = this.$el.data();
-				if(meta.view && (meta.view._options.template !== this._options.template))
+				if(meta.view && (meta.view.template !== this.template))
 					meta.view.teardown();
 
 				//re-render but not registering the listeners again.
 				this.$el.html(content);
 				if(!this.$el.data('_events_')) {
-					this.$el.on(this._options.events);
+					this.$el.on(this.events);
 					this.$el.data('_events_', true);
 				}
 				this.$el.data('view', this);
@@ -134,13 +150,30 @@
 			if(this.$el) {
 				this.$el.trigger.apply(this.$el, arguments);
 			}
+		},
+	});
+	//static methods
+	_.extend(View, {
+		//class inheritance
+		extend: function(configure, statics){
+			var B = function(options){
+				View.apply(this, options);
+			};
+
+			B.prototype = new View(); //logic-free constructor
+			_.extend(B.prototype, configure);
+			_.extend(B, View, statics);
+
+			B.prototype.constructor = B;
+
+			return B;
 		}
 	});
 
 	//-----------------hooks into app infrastructure-------------------
 	//setup main view
 	app.coordinator.on('app.initialize', function(){
-		app.ve.view({
+		app.ve.component('Main', {
 			template: 'main',
 			$el: app.$container,
 			init: function(options){
@@ -155,7 +188,9 @@
 					app.coordinator.trigger('app.mainview-closed');
 				}
 			}
-		}).render();
+		});
+
+		(new app.ve.components.Main).render();
 		
 		app.coordinator.trigger('app.initialized');
 	});
@@ -163,6 +198,14 @@
 	//----------------apis enhancement to app-------------------------
 	app.ve.view = function(options){
 		return new View(options);
+	};
+
+	app.ve.components = {};
+	app.ve.component = function(name, configure){
+		if(app.ve.components[name]) app.throw('Component name already registered: ' + name);
+
+		app.ve.components[name] = View.extend(configure);
+		return app.ve.components[name];
 	};
 
 })(_, jQuery, Application, Mustache);

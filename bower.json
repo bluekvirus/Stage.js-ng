@@ -22,9 +22,10 @@
     "bootstrap": "~3.3.x",
     "bootstrap-material-design": "~0.3.x",
     "fontawesome": "~4.3.x",
-    "kendo-ui-core": "~2015.1.430",      
+    "kendo-ui-core": "~2015.1.430",
     "ractive": "~0.7.2",
-    "mustache": "~2.0.0"
+    "mustache": "~2.0.0",
+    "i18next": "~1.8.2"
   },
   "devDependencies": {
     "mocha": "~2.2.x",

@@ -14,4 +14,6 @@ config.javascript.libs.push(
 
 config.templates = ['src/components/**/*.ractive.html'];
 
+config.output = 'public/ractive';
+
 module.exports = config; 

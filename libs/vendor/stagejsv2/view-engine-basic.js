@@ -83,7 +83,7 @@
 	_.extend(View.prototype, {
 		init: _.noop,
 
-		render: function(datanconfig, $el){
+		render: function($el, data){
 
 			//check the template first!
 			if(!this.template) app.throw('View definition requires a template!');
@@ -91,7 +91,7 @@
 			if(!app.templates[this.template]) app.throw('Template not found! ' + this.template);			
 			
 			this.$el = $el || this.$el;
-			this.data = datanconfig || this.data;
+			this.data = data || this.data;
 
 			var content = Mustache.render(app.templates[this.template], this.data);
 
@@ -156,13 +156,15 @@
 	_.extend(View, {
 		//class inheritance
 		extend: function(configure, statics){
+			var A = this.prototype.constructor;
+
 			var B = function(options){
-				View.apply(this, options);
+				A.apply(this, options);
 			};
 
-			B.prototype = new View(); //logic-free constructor
+			B.prototype = new A(); //logic-free constructor
 			_.extend(B.prototype, configure);
-			_.extend(B, View, statics); 
+			_.extend(B, A, statics); 
 			//note that `prototype` and `constructor` are non-enumerable, thus won't be copied by _.extend()
 
 			B.prototype.constructor = B;
@@ -176,7 +178,6 @@
 	app.coordinator.on('app.initialize', function(){
 		app.ve.component('Main', {
 			template: 'main',
-			$el: app.$container,
 			init: function(options){
 				app.coordinator.trigger('app.mainview-initialized');
 			},
@@ -191,7 +192,7 @@
 			}
 		});
 
-		(new app.ve.components.Main).render();
+		(new app.ve.components.Main()).render(app.$container);
 		
 		app.coordinator.trigger('app.initialized');
 	});

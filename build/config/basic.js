@@ -13,4 +13,6 @@ config.javascript.libs.push(
 
 config.templates = ['src/vanilla/**/*.mst.html'];
 
+config.output = 'public/basic';
+
 module.exports = config; 

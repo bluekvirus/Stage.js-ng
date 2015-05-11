@@ -130,7 +130,28 @@
  * concept: js object (listeners) -> view
  *
  *
- * Form Generator (plugin)
+ * Communication (plugin)
+ * -------------
+ * Use `app.com.ajax` ($.ajax) or add your own into `app.com`
+ *
+ *
+ * I18N (plugin)
+ * ----
+ * '...'.i18n, $.fn.i18n
+ *
+ *
+ * Coordination (plugin)
+ * ------------
+ * app.coordinator (co-op events)
+ * 
+ *
+ * Utils (plugin)
+ * -----
+ * debug logging
+ * url query params
+ * 
+ *
+ * Form Generator (TBI)
  * --------------
  * It would be a lot easier if you can generate form template and conditional control based on the 
  * form data (or schema) itself. Ideally this could be done by:
@@ -141,11 +162,6 @@
  *
  * concept: html <input>, <select>, <textarea> + customizable wrapper = form editor tpl
  * concept: js object (data/schema) + form skeleton (fieldset/editor positions) = form tpl
- *
- *
- * Communication (not included)
- * -------------
- * Use `app.com.ajax` ($.ajax) or add your own into `app.com`
  *
  *
  * App States (TBI)
@@ -176,11 +192,12 @@
 		_load: function(){ //--> [override]
 			//default *load* implementation:
 			//a. load templates.json into app.templates.
-			this.com.ajax({ url: 'templates.json', async: false }).done(function(tpls){
+			this.com.ajax({ url: 'templates.json' }).done(function(tpls){
 				app.templates = app.templates?_.merge(app.templates, tpls):tpls;
+
+				app.coordinator.trigger('app.load'); //--> [extend]
 			});
 
-			this.coordinator.trigger('app.load'); //--> [extend]
 		},
 
 		//2. runtime initialization
@@ -214,12 +231,12 @@
 					that.coordinator.on('app.initialize', function(){
 						that.coordinator.trigger('app.initialized');
 					});
-				that.coordinator.many('app.loaded', that.coordinator.listeners('app.load').length, function(){
+				that.coordinator.on('app.loaded', _.after(that.coordinator.listeners('app.load').length, function(){
 					that._init();
-				});
-				that.coordinator.many('app.initialized', that.coordinator.listeners('app.init').length, function(){
+				}));
+				that.coordinator.on('app.initialized', _.after(that.coordinator.listeners('app.initialize').length, function(){
 					that._ready();
-				});
+				}));
 				that._load();
 			});
 		}

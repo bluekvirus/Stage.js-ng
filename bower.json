@@ -24,7 +24,8 @@
     "fontawesome": "~4.3.x",
     "ractive": "~0.7.2",
     "mustache": "~2.0.0",
-    "i18next": "~1.8.2"
+    "i18next": "~1.8.2",
+    "kendo-ui-core": "~2015.1.430"
   },
   "devDependencies": {
     "mocha": "~2.2.x",

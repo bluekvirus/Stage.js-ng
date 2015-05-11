@@ -99,9 +99,10 @@
 
 	//component api (-> class)
 	app.ve.component = function(name, configure){
-		if(app.ve.components[name]) app.throw('Component name already registered: ' + name);
-
-		app.ve.components[name] = Ractive.extend(configure);
+		if(app.ve.components[name])
+			app.ve.components[name] = app.ve.components[name].extend(configure);
+		else
+			app.ve.components[name] = Ractive.extend(configure);
 		return app.ve.components[name];
 	};
 

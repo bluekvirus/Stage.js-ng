@@ -46,8 +46,8 @@
  *
  * Gotcha
  * ------
- * 1. If you use `app.coordinator.on` for co-op with other things in the application, make sure to use the `teardown`
- * event to clean things up.
+ * 1. If you use `app.coordinator.on` for co-op with other things in the application, make sure to clean the listener
+ * up in the view's `teardown` event.
  * 2. there are no `on<event>` shortcut functions for listeners in a view. use `.on`/`.once` and `options.events` to 
  * register them instead.
  * 
@@ -70,6 +70,7 @@
 		this._options = options || {};
 		
 		//optional
+		this.$el = this._options.el && $(this._options.el);
 		this.$el = this._options.$el || this.$el;
 		this.data = this._options.data || this.data;
 		this.init = this._options.init || this._options.initialize || this.init;
@@ -181,6 +182,8 @@
 			app.ve.component(name, {
 				template: filename
 			});
+
+			app.debug('component registered:', name);
 		});
 
 		app.coordinator.trigger('app.loaded');
@@ -204,7 +207,7 @@
 			}
 		});
 
-		(new app.ve.components.Main({$el: app.$container})).render();
+		(new app.ve.components.Main({el: app.$container})).render();
 		
 		app.coordinator.trigger('app.initialized');
 	});

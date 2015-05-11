@@ -11,7 +11,7 @@
 		coordinator: new EventEmitter({
 			wildcard: true, //enable a.* and a.*.c as event name
 			delimiter: '.', //in between name segments (for wildcard matching)
-			maxListeners: 10 //per event
+			maxListeners: 15 //per event
 		}),
 	});
 

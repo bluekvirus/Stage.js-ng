@@ -69,11 +69,7 @@
 		});
 
 		_.each(app.templates, function(tpl, filename){
-			var componentPath = filename.replace('.ractive.html', '')/*Hardcode!*/;
-			if(_.endsWith(componentPath, 'index')) componentPath = componentPath.replace('index', '');
-			app.debug(filename, '=>', componentPath);
-
-			var name = _.capitalize(_.camelCase(componentPath));
+			var name = app.tplNameToCompName(filename, '.ractive.html');
 			RactiveUtil.make(tpl, {
 				url: filename,
 				loadImport: function(tag, path, parentUrl, cb){

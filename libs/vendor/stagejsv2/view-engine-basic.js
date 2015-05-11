@@ -87,13 +87,12 @@
 
 			//check the template first!
 			if(!this.template) app.throw('View definition requires a template!');
-			this.template = _.endsWith('.mst.html')?this.template:(this.template + '.mst.html');
-			if(!app.templates[this.template]) app.throw('Template not found! ' + this.template);			
+			var tpl = app.templates[this.template] || app.templates[this.template + '.mst.html'] || this.template;
 			
 			this.$el = $el || this.$el;
 			this.data = data || this.data;
 
-			var content = Mustache.render(app.templates[this.template], this.data);
+			var content = Mustache.render(tpl, this.data);
 
 			if(this.$el) {
 				//teardown previous view if template is different.
@@ -158,8 +157,8 @@
 		extend: function(configure, statics){
 			var A = this.prototype.constructor;
 
-			var B = function(options){
-				A.apply(this, options);
+			var B = function(){
+				A.apply(this, arguments); //instead of A.call(this, arg1, arg2, ...)
 			};
 
 			B.prototype = new A(); //logic-free constructor
@@ -174,10 +173,23 @@
 	});
 
 	//-----------------hooks into app infrastructure-------------------
+	//convert templates into components
+	app.coordinator.on('app.load', function(){
+
+		_.each(app.templates, function(tpl, filename){
+			var name = app.tplNameToCompName(filename, '.mst.html');
+			app.ve.component(name, {
+				template: filename
+			});
+		});
+
+		app.coordinator.trigger('app.loaded');
+	});
+	
 	//setup main view
 	app.coordinator.on('app.initialize', function(){
+
 		app.ve.component('Main', {
-			template: 'main',
 			init: function(options){
 				app.coordinator.trigger('app.mainview-initialized');
 			},
@@ -192,7 +204,7 @@
 			}
 		});
 
-		(new app.ve.components.Main()).render(app.$container);
+		(new app.ve.components.Main({$el: app.$container})).render();
 		
 		app.coordinator.trigger('app.initialized');
 	});
@@ -204,9 +216,12 @@
 
 	app.ve.components = {};
 	app.ve.component = function(name, configure){
-		if(app.ve.components[name]) app.throw('Component name already registered: ' + name);
-
-		app.ve.components[name] = View.extend(configure);
+		if(app.ve.components[name]) {
+			//override 
+			app.ve.components[name] = app.ve.components[name].extend(configure);
+		} else
+			//register
+			app.ve.components[name] = View.extend(configure);
 		return app.ve.components[name];
 	};
 

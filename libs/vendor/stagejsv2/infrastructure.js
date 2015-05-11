@@ -1,6 +1,6 @@
 /**
  * The minimum app infrastructure for common SPA bootup.
- * (*requires lodash, jQuery, director and EventEmitter2)
+ * (*requires lodash, jQuery)
  *
  * 
  * Process
@@ -14,28 +14,52 @@
  * - ._load (->e app.load, requires firing app.loaded in hooks)
  * - ._init (->e app.initialize, requires firing app.initialized in hooks)
  * - ._ready (->e app.ready)
- * - .start (<ready event>, [handshake-mode?]) - entrypoint
- * - .navigate (->e app.navigate)
+ * - .start (<ready event>) - entrypoint
+ *
+ * plugin: com
  * - .com.ajax (v2)
  * - [.com.socket (websocket)]
  * - [.com.peer (rtc)]
+ *
+ * plugin: coop
  * - .coordinator.on
  * - .coordinator.off
  * - .coordinator.once
  * - .coordinator.many
+ *
+ * plugin: navigation
+ * - .navigate (path)
+ *
+ * plugin: utils
+ * - .tplNameToCompName (convert template filename to component class name)
  * - .param (get single or all of ?... search string params in url)
  * - .debug (activate when ?debug=true, replacing console.log calls)
  * - .throw (same as throwing an exception)
  *
+ * plugin: view-engine
+ * - .ve.view
+ * - .ve.component
+ * 
  *
  * Properties
  * ----------
  * - .$container
  * - .templates
+ *
+ * plugin: navigation
  * - .routes
  * - .router
+ *
+ * plugin: coop
  * - .coordinator
+ *
+ * plugin: com
  * - .com
+ *
+ * plugin: view-engine
+ * - .ve
+ * - .ve.components
+ * 
  * - [.state]
  *
  * 
@@ -79,7 +103,7 @@
  * EVERY listener to these 2 events.
  * 
  * 
- * Navigation (default)
+ * Navigation (plugin)
  * ----------
  * If you haven't changed the navigation implementation, here is the default behavior.
  * Each time the hash portion (/#...) changes a default navigation event will be triggered.
@@ -96,7 +120,7 @@
  * Implement yours in the `app.navigation` listener.
  *
  * 
- * View Manager/Engine (not included)
+ * View Manager/Engine (plugin)
  * -------------------
  * Normally you would need to have at least one View manager loaded to enhance your html templates. 
  * It wrapps a View lib/engine (html,js object to view) that has layout management, interaction hooks
@@ -106,7 +130,7 @@
  * concept: js object (listeners) -> view
  *
  *
- * Form Generator (not included)
+ * Form Generator (plugin)
  * --------------
  * It would be a lot easier if you can generate form template and conditional control based on the 
  * form data (or schema) itself. Ideally this could be done by:
@@ -119,8 +143,8 @@
  * concept: js object (data/schema) + form skeleton (fieldset/editor positions) = form tpl
  *
  *
- * Data Path
- * ---------
+ * Communication (not included)
+ * -------------
  * Use `app.com.ajax` ($.ajax) or add your own into `app.com`
  *
  *
@@ -133,27 +157,15 @@
  * @created 2015.04.06
  */
 
-(function(_, $, Router, EventEmitter){
+(function(_, $){
 
 	//application object
 	var app = {
 		$container: $('#app'),
-		routes: {
-			//default routing implementation (forward the navigation e, params):
-			'/:context/?([^\/]*)/?(.*)': function(ctx, item, rest){
-				app.coordinator.trigger('app.navigate', ctx, item, rest); //--> <*required>
-			}
-		},
-		coordinator: new EventEmitter({
-			wildcard: true, //enable a.* and a.*.c as event name
-			delimiter: '.', //in between name segments (for wildcard matching)
-			maxListeners: 10 //per event
-		}),
 		com: {
 			ajax: $.ajax
 		},
-		//templates: {},
-		_cache: {},
+		templates: {},
 
 		//0. config (careful, it will override app it self)
 		config: function(newcfg){
@@ -167,6 +179,7 @@
 			this.com.ajax({ url: 'templates.json', async: false }).done(function(tpls){
 				app.templates = app.templates?_.merge(app.templates, tpls):tpls;
 			});
+
 			this.coordinator.trigger('app.load'); //--> [extend]
 		},
 
@@ -186,8 +199,6 @@
 
 		//3. kickoff navigation
 		_ready: function(){
-			//kick off navigation
-			this.router = new Router(this.routes).init();
 			this.coordinator.trigger('app.ready'); //--> [extend]
 		},
 
@@ -211,70 +222,12 @@
 				});
 				that._load();
 			});
-		},
-
-		//expose navigation api
-		navigate: function(path){
-			return this.router.setRoute(path);
-		},
-
-
-		//debug logging/exception throwing shortcut
-		param: function(key, defaultval){
-			//return single param value in the ?... search string in url or all of them.
-			//-------
-			// Gotcha: If you modify the ?... query string without hitting enter, params won't change.
-			//-------
-			if(app._cache.searchstring !==  window.location.search.substring(1)){
-				var params = {};
-				app._cache.searchstring = window.location.search.substring(1);
-				_.each(app._cache.searchstring.split('&'), function(pair){
-					pair = pair.split('=');
-					params[pair[0]] = pair[1];
-				});
-				app._cache.params = params;
-			}
-			if(key)
-				return _.isUndefined(app._cache.params[key])? defaultval : app._cache.params[key];
-			return app._cache.params;
-		},
-		debug: function(){
-			//as console.log wrapper
-			if(app.param('debug') === 'true')
-				return console.log.apply(console.log, arguments);
-		},
-		throw: function(e){
-			//e can be string, number or an object with .name and .message
-			throw e;
 		}
-	};
-
-	//enhance the coordinator.emit (+ event name, if no args, + trigger, fire as alias)
-	//mask the coordinator.on/off to support wildcard '*' any event.
-	var _oldemit = app.coordinator.emit;
-	var _oldon = app.coordinator.on;
-	var _oldoff = app.coordinator.off;
-	app.coordinator.emit = app.coordinator.trigger = app.coordinator.fire = function(){
-		if(arguments.length === 1)
-			_oldemit.call(app.coordinator, arguments[0], arguments[0]);
-		else
-			_oldemit.apply(app.coordinator, arguments);
-	};
-	app.coordinator.on = function(){
-		if(arguments.length === 2 && arguments[0] === '*')
-			return app.coordinator.onAny(arguments[1]);
-		return _oldon.apply(app.coordinator, arguments);
-	};
-	app.coordinator.off = function(){
-		if(arguments.length === 2 && arguments[0] === '*')
-			return app.coordinator.offAny(arguments[1]);
-		return _oldoff.apply(app.coordinator, arguments);
-	};
-	
+	};	
 
 	//expose globals
 	window.Application = window.app = app;
 	window.$window = $(window);
 	window.$document = $(document);
 
-})(_, jQuery, Router, EventEmitter2);
+})(_, jQuery);

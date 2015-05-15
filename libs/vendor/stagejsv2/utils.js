@@ -10,7 +10,7 @@
 	app.config({
 		_cache: {},
 
-		//conver template file name to view/component class name
+		//convert template file name to view/component class name
 		tplNameToCompName: function(filename, suffix){
 			suffix = suffix || '.tpl.html';
 			var componentPath = filename.replace(suffix, '');

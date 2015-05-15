@@ -181,7 +181,6 @@
 		com: {
 			ajax: $.ajax
 		},
-		templates: {},
 
 		//0. config (careful, it will override app it self)
 		config: function(newcfg){
@@ -193,8 +192,10 @@
 			//default *load* implementation:
 			//a. load templates.json into app.templates.
 			this.com.ajax({ url: 'templates.json' }).done(function(tpls){
-				app.templates = app.templates?_.merge(app.templates, tpls):tpls;
-
+				app.templates = (app.templates?_.merge(app.templates, tpls):tpls) || {};
+			}).fail(function(){
+				app.templates = {};
+			}).always(function(){
 				app.coordinator.trigger('app.load'); //--> [extend]
 			});
 

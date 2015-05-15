@@ -85,13 +85,7 @@
 		app.ve.components = Ractive.components || {};
 	});
 
-	//setup main view
-	app.coordinator.on('app.initialize', function(){
-		new app.ve.components.Main({el: app.$container}); 
-		app.coordinator.trigger('app.initialized');
-	});
-
-	//----------------apis enhancement to app-------------------------
+	//-------------------apis enhancement to app-----------------------
 	//view api (-> instance)
 	app.ve.view = function(configure){
 		return new Ractive(configure);

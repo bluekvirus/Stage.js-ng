@@ -79,6 +79,7 @@
 
 		//extension point
 		this.init(this._options);
+		if(this.$el) this.render();
 	};
 	//member methods
 	_.extend(View.prototype, {
@@ -189,29 +190,6 @@
 		app.coordinator.trigger('app.loaded');
 	});
 	
-	//setup main view
-	app.coordinator.on('app.initialize', function(){
-
-		app.ve.component('Main', {
-			init: function(options){
-				app.coordinator.trigger('app.mainview-initialized');
-			},
-			events: {
-				'render': function(){
-					if($.material) $.material.init();
-					app.coordinator.trigger('app.mainview-rendered');
-				},
-				'teardown': function(){
-					app.coordinator.trigger('app.mainview-closed');
-				}
-			}
-		});
-
-		(new app.ve.components.Main({el: app.$container})).render();
-		
-		app.coordinator.trigger('app.initialized');
-	});
-
 	//----------------apis enhancement to app-------------------------
 	app.ve.view = function(options){
 		return new View(options);

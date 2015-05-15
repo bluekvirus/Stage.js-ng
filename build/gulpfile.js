@@ -10,12 +10,14 @@
  * 3. js: 
  * 		a. es6/commonjs -> [browserify (commonjs bundle + babelify)] -> /{output}/app.js
  * 		b. vendor/shared util JS -> concatenate -> {output}/libs.js
+ * 		c. amd/requirejs -> [TBI]
  * 4. assets: 
  * 		a. assets/* -> copy into /{output}/*
  * 		b. copy and re-dir/merge certain file/folder
  * 5. compress: minify and gzip the *.js and *.css in the output folder.
  * 6. clean: clear the output folder.
  * 7. watch: watching changes and re-run js, css and tpl tasks.
+ * 8. dance: continue development after shallow build, using requirejs.
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
  *
@@ -139,6 +141,7 @@ var jspipe = {
 gulp.task('tpl', 'Combine HTML templates/components', tplTask);
 function tplTask(){
 	//console.log(configure.templates);
+	if(!configure.templates) return;
 	var tpls = {}; // --> JSON.stringify() upon 'finish'
 	var file = new gutil.File({path: 'templates.json'});
 	return gulp.src(configure.templates, {cwd: configure.root})
@@ -292,4 +295,16 @@ gulp.task('clean', 'Purge the output folder', function cleanTask(){
 	console.log('Files deleted:', deletedFiles.length);
 	if(deletedFiles.length) deletedFiles.push('');// add an empty line.
 	console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
+});
+
+
+//=====
+//dance (through requirejs amd)
+//=====
+gulp.task('dance', 'Create shadow links to src and continue dev after shallow build', function danceTask(){
+
+	//1. create symlinks according to configure.shadows into configure.output
+	
+	//2. remove *.amd targets found in configure.js from index.html and append requirejs related <script> tags
+
 });

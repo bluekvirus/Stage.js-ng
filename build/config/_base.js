@@ -119,7 +119,17 @@ module.exports = {
 		},
 	],
 
+	//---------------symlinks---------------
+	//create symbolic links to output folder (non-production mode)
+	//names will be prefixed by _shadow_ (e.g _shadow_name)
+	//Don't change unless sure about...
+	shadows: {
+		'libs/vendor/requirejs': 'requirejs',
+		'src': 'src'
+	},
+
 	//----------gulp plugin configs---------
+	//Don't change unless sure about...
 	plugins: {
 
 		autoprefixer: {},
@@ -144,7 +154,7 @@ module.exports = {
 	},
 
 	//------------watch params--------------
-	//Don't change this unless sure about...
+	//Don't change unless sure about...
 	watch: {
 		usePolling: true,
 		delay: {

@@ -52,4 +52,9 @@
 		}
 	});
 
+	//debug: show coop events
+	if(app.param('debug'))
+		app.coordinator.on('*', function(){app.debug(arguments);});
+
+
 })(Application, _);

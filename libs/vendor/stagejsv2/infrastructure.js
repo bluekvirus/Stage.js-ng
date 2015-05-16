@@ -3,10 +3,12 @@
  * (*requires lodash, jQuery)
  *
  * 
- * Process
+ * Process (app.start())
  * -------
  * config -> load(tpl, i18n, ...) -> init(main view, $plugins, screen event, ...) -> ready
  *
+ * *Note*: You are responsible for timing app.start() with proper page/DOM ready event. Do NOT call it directly.
+ * 
  * 
  * APIs
  * -------
@@ -14,7 +16,7 @@
  * - ._load (->e app.load, requires firing app.loaded in hooks)
  * - ._init (->e app.initialize, requires firing app.initialized in hooks)
  * - ._ready (->e app.ready)
- * - .start (<ready event>) - entrypoint
+ * - .start () - entrypoint
  *
  * plugin: com
  * - .com.ajax (v2)
@@ -72,7 +74,8 @@
  *  
  * ####Sample Code:
  * ```
- * app.config({...}).start([ready event]);
+ * app.config({...})
+ * $(function(){app.start();});
  *      
  * app.coordinator.on('app.navigate', function(ctx, item, rest){
  * 	console.log('@context', ctx, '@item', item, '@rest', rest);
@@ -220,26 +223,25 @@
 			this.coordinator.trigger('app.ready'); //--> [extend]
 		},
 
-		//entry point (support mobile ready event, and pause-by-each-step mode)
-		start: function(e){ //--> [customizable mobile ready e]
+		//entry point (support pause-by-each-step mode)
+		//Time this with page/DOM ready, do NOT call it directly.
+		start: function(){
 			var that = this;
-			$document.on(e || 'ready', function(){
-				if(that.coordinator.listeners('app.load').length === 0)
-					that.coordinator.on('app.load', function(){
-						that.coordinator.trigger('app.loaded');
-					});
-				if(that.coordinator.listeners('app.initialize').length === 0)
-					that.coordinator.on('app.initialize', function(){
-						that.coordinator.trigger('app.initialized');
-					});
-				that.coordinator.on('app.loaded', _.after(that.coordinator.listeners('app.load').length, function(){
-					that._init();
-				}));
-				that.coordinator.on('app.initialized', _.after(that.coordinator.listeners('app.initialize').length, function(){
-					that._ready();
-				}));
-				that._load();
-			});
+			if(that.coordinator.listeners('app.load').length === 0)
+				that.coordinator.on('app.load', function(){
+					that.coordinator.trigger('app.loaded');
+				});
+			if(that.coordinator.listeners('app.initialize').length === 0)
+				that.coordinator.on('app.initialize', function(){
+					that.coordinator.trigger('app.initialized');
+				});
+			that.coordinator.on('app.loaded', _.after(that.coordinator.listeners('app.load').length, function(){
+				that._init();
+			}));
+			that.coordinator.on('app.initialized', _.after(that.coordinator.listeners('app.initialize').length, function(){
+				that._ready();
+			}));
+			that._load();
 		}
 	};	
 

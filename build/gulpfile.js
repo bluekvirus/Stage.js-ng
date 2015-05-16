@@ -89,12 +89,13 @@ gulp.task('default', false,
 //js (+jshint?)
 //=======
 gulp.task('js', 'Compile/Concat js modules(es6)/libs', ['tpl'], jsTask);
-function jsTask(cb, compileonly){
+function jsTask(cb, compileonly, subset){
 	//console.log(configure.javascript);
 	var merged = mergeStream();
 	_.forIn(configure.javascript, function(v, k){
 		//v --> entrypoint/array, k --> js target
 		if(compileonly && _.isArray(v)) return;
+		if(subset && !_.includes(subset, k)) return;
 		merged.add(
 			(_.isArray(v)?
 				gulp.src(v, {cwd: configure.root})
@@ -141,7 +142,6 @@ var jspipe = {
 gulp.task('tpl', 'Combine HTML templates/components', tplTask);
 function tplTask(){
 	//console.log(configure.templates);
-	if(!configure.templates) return;
 	var tpls = {}; // --> JSON.stringify() upon 'finish'
 	var file = new gutil.File({path: 'templates.json'});
 	return gulp.src(configure.templates, {cwd: configure.root})
@@ -254,6 +254,7 @@ gulp.task('watch', 'Watching changes to src/style/template and rebuild', functio
 	});
 });
 
+
 //========
 //compress (+templates.json?)
 //========
@@ -303,8 +304,31 @@ gulp.task('clean', 'Purge the output folder', function cleanTask(){
 //=====
 gulp.task('dance', 'Create shadow links to src and continue dev after shallow build', function danceTask(){
 
-	//1. create symlinks according to configure.shadows into configure.output
-	
-	//2. remove *.amd targets found in configure.js from index.html and append requirejs related <script> tags
+	//only available in production mode
+	if(configure.production) return;
 
+	//1. create symlinks according to configure.shadows into configure.output
+	_.each(configure.shadows, function(link, src){
+		var srcpath = path.join(configure.root, src),
+		dstpath = path.join(configure.root, configure.output, path.dirname(link), '_shadow_' + path.basename(link));
+		fs.symlink(srcpath, dstpath, fs.statSync(srcpath).isDirectory()?'dir':'file', function(){
+			console.log('linked'.yellow, srcpath.replace(configure.root, ''), '-->'.grey, dstpath.replace(configure.root, ''));
+		});
+		
+	});
+
+	//2. change app.js targets to amd wrapper and recompile
+	//TBI: move dancetarget to --target (default:app)
+	var dancetarget = 'app'; //!!HARDCODE!!
+	if(configure.javascript[dancetarget]){ 
+		configure.javascript[dancetarget] = [
+			'libs/vendor/requirejs/require.js',
+			'libs/vendor/requirejs/config.js'
+		];
+		jsTask(_.noop, false, [dancetarget]);
+	}
+
+	//3. remove templates.json
+	configure.templates = [];
+	tplTask();
 });

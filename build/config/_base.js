@@ -71,6 +71,12 @@ module.exports = {
 		//app.js
 		app: 'src/entrypoint.js',
 
+		//amd during dev? (applied automatically with task:dance)
+		// app: [
+		// 	'libs/vendor/requirejs/require.js',
+		// 	'libs/vendor/requirejs/config.js'
+		// ],
+
 		//libs.js
 		libs: [
 			'libs/bower_components/jquery/dist/jquery.js',
@@ -81,8 +87,8 @@ module.exports = {
 			'libs/bower_components/i18next/i18next.js',
 			//-----------------------------------------
 			'libs/vendor/stagejsv2/infrastructure.js',
-			'libs/vendor/stagejsv2/utils.js',
 			'libs/vendor/stagejsv2/coop-ee2.js',
+			'libs/vendor/stagejsv2/utils.js',
 			'libs/vendor/stagejsv2/com-ajax-ws-rtc.js',
 			'libs/vendor/stagejsv2/i18n-i18next.js',
 			'libs/vendor/stagejsv2/navigation-director.js',
@@ -121,10 +127,10 @@ module.exports = {
 
 	//---------------symlinks---------------
 	//create symbolic links to output folder (non-production mode)
-	//names will be prefixed by _shadow_ (e.g _shadow_name)
+	//names will be prefixed by _shadow_ (e.g dir/_shadow_basename)
 	//Don't change unless sure about...
 	shadows: {
-		'libs/vendor/requirejs': 'requirejs',
+		'libs/vendor/requirejs/require-text.js': 'js/require-text.js',
 		'src': 'src'
 	},
 

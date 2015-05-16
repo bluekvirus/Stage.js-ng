@@ -10,6 +10,10 @@
 	app.config({
 		_cache: {},
 
+		isAMDEnabled: function(){
+			return typeof define === "function" && define.amd;
+		},
+
 		//convert template file name to view/component class name
 		tplNameToCompName: function(filename, suffix){
 			suffix = suffix || '.tpl.html';

@@ -5,6 +5,9 @@
  * ----------------
  * app.ve
  * app.ve.view
+ * app.ve.component
+ * app.ve.components
+ * app.ve.inject
  * $(el).data('view')
  *
  *
@@ -21,6 +24,8 @@
  * 3. view.on/trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
+ * 6. view.bind() TBI (two-way with binders in tpl)
+ * 7. view.vm (available after view.bind())
  * 
  *
  * Life cycle
@@ -61,7 +66,7 @@
  * @created 2015.04.27
  */
 (function(_, $, app, Mustache){
-	app.ve = {name: 'Basic'};
+	app.ve = {name: 'Basic', _tplSuffix: '.mst.html'};
 
 	//--------------------------------View class definition---------------------------------
 	//.template, .$el, .data, init() .render(e), .teardown(e), .events, .once/on/off/trigger()
@@ -89,7 +94,7 @@
 
 			//check the template first!
 			if(!this.template) app.throw('View definition requires a template!');
-			var tpl = app.templates[this.template] || app.templates[this.template + '.mst.html'] || this.template;
+			var tpl = app.templates[this.template] || app.templates[this.template + app.ve._tplSuffix] || this.template;
 			
 			this.$el = $el || this.$el;
 			this.data = data || this.data;
@@ -179,7 +184,7 @@
 	app.coordinator.on('app.load', function(){
 
 		_.each(app.templates, function(tpl, filename){
-			var name = app.tplNameToCompName(filename, '.mst.html');
+			var name = app.tplNameToCompName(filename, app.ve._tplSuffix);
 			app.ve.component(name, {
 				template: filename
 			});
@@ -204,6 +209,28 @@
 			//register
 			app.ve.components[name] = View.extend(configure);
 		return app.ve.components[name];
+	};
+
+	app.ve.inject = function(path, options, cb){
+		if(!app.isAMDEnabled()) app.throw('AMD is not enabled, use task:dance before ve.inject()');
+		if(_.isFunction(options)){
+			cb = options;
+			options = {};
+		}
+		options = _.extend({
+			baseURL: 'vanilla/',
+			tplOnly: false,
+			forceName: ''
+		}, options);
+		var tplTarget = _.endsWith(path, '/')?[options.baseURL, path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, path, app.ve._tplSuffix].join(''),
+		jsTarget = tplTarget.replace(app.ve._tplSuffix, '');
+		var targets = ['text!' + tplTarget];
+		if(!options.tplOnly) targets.push(jsTarget);
+		//don't use define here... the cb will never gets invoked. (until what's define()-ed gets required)
+		require(targets, function(tpl, js){
+			js = js || {};
+			cb(app.ve.component(options.forceName?options.forceName:app.tplNameToCompName(path), _.extend(js, {template: tpl})));
+		});
 	};
 
 })(_, jQuery, Application, Mustache);

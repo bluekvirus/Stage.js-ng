@@ -3,16 +3,8 @@ app.config();
 
 //initialize main view
 app.coordinator.on('app.initialize', function(){
-	var init = function(){
-		new app.ve.components.Main({el: app.$container});
-		app.coordinator.trigger('app.initialized');
-	};
-	if(app.isAMDEnabled())
-		app.ve.inject('main', function(){
-			init();
-		});
-	else
-		init();
+	new app.ve.components.Main({el: app.$container});
+	app.coordinator.trigger('app.initialized');
 });
 
 //listen to navigation event
@@ -20,9 +12,13 @@ app.coordinator.on('app.navigate', function(ctx, item, rest){
 	app.debug('@context', ctx, '@item', item, '@rest', rest);
 });
 
+//kickstart app
+var start = function(){
+	$(function(){app.start();});
+};
 if(app.isAMDEnabled())
 	define(function(){
-		$(function(){app.start();});
+		app.ve.inject('main', start);
 	});
 else
-	$(function(){app.start();});
+	start();

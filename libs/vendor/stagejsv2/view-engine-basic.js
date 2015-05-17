@@ -211,8 +211,10 @@
 		return app.ve.components[name];
 	};
 
-	app.ve.inject = function(path, options, cb){
+	app.ve.inject = function(options, cb){
 		if(!app.isAMDEnabled()) app.throw('AMD is not enabled, use task:dance before ve.inject()');
+		if(_.isString(options))
+			options = {path: options};
 		if(_.isFunction(options)){
 			cb = options;
 			options = {};
@@ -222,14 +224,15 @@
 			tplOnly: false,
 			forceName: ''
 		}, options);
-		var tplTarget = _.endsWith(path, '/')?[options.baseURL, path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, path, app.ve._tplSuffix].join(''),
+		var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
+		var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
 		jsTarget = tplTarget.replace(app.ve._tplSuffix, '');
 		var targets = ['text!' + tplTarget];
 		if(!options.tplOnly) targets.push(jsTarget);
 		//don't use define here... the cb will never gets invoked. (until what's define()-ed gets required)
 		require(targets, function(tpl, js){
 			js = js || {};
-			cb(app.ve.component(options.forceName?options.forceName:app.tplNameToCompName(path), _.extend(js, {template: tpl})));
+			cb(app.ve.component(compName, _.extend(js, {template: tpl})));
 		});
 	};
 

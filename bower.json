@@ -29,7 +29,8 @@
     "snackbarjs": "~1.x.x",
     "nouislider": "~7.x.x",
     "owl-carousel2": "*",
-    "sidr": "~1.2.x"
+    "sidr": "~1.2.x",
+    "async": "~0.9.2"
   },
   "devDependencies": {
     "mocha": "~2.2.x",

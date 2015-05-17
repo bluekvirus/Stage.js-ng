@@ -49,7 +49,7 @@
  */
 
 (function(_, $, app, Ractive, RactiveUtil){
-	app.ve = {name: 'Ractive'};
+	app.ve = {name: 'Ractive', _tplSuffix: '.ractive.html'};
 
 	//----------------patching Ractive---------------------------------
 	Ractive.DEBUG = app.param('debug', false);
@@ -69,7 +69,7 @@
 		});
 
 		_.each(app.templates, function(tpl, filename){
-			var name = app.tplNameToCompName(filename, '.ractive.html');
+			var name = app.tplNameToCompName(filename, app.ve._tplSuffix);
 			RactiveUtil.make(tpl, {
 				url: filename,
 				loadImport: function(tag, path, parentUrl, cb){

@@ -1,11 +1,11 @@
 /**
- * Infrastructure Plugin: Coordinator based on EventEmitter2
+ * Infrastructure Plugin: Coordinator based on EventEmitter2, async
  *
  * @author Tim Lauv
  * @created 2015.05.10
  */
 
-(function(app, EventEmitter){
+(function(app, EventEmitter, async){
 
 	app.config({
 		coordinator: new EventEmitter({
@@ -35,6 +35,9 @@
 		if(arguments.length === 2 && arguments[0] === '*')
 			return app.coordinator.offAny(arguments[1]);
 		return _oldoff.apply(app.coordinator, arguments);
-	};	
+	};
 
-})(Application, EventEmitter2);
+	//+async.js
+	app.coordinator.async = async;
+
+})(Application, EventEmitter2, async);

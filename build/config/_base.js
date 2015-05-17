@@ -83,11 +83,12 @@ module.exports = {
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/eventemitter2/lib/eventemitter2.js',
+			'libs/bower_components/async/lib/async.js',
 			'libs/bower_components/director/build/director.js',
 			'libs/bower_components/i18next/i18next.js',
 			//-----------------------------------------
 			'libs/vendor/stagejsv2/infrastructure.js',
-			'libs/vendor/stagejsv2/coop-ee2.js',
+			'libs/vendor/stagejsv2/coop-ee2-async.js',
 			'libs/vendor/stagejsv2/utils.js',
 			'libs/vendor/stagejsv2/com-ajax-ws-rtc.js',
 			'libs/vendor/stagejsv2/i18n-i18next.js',

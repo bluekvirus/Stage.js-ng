@@ -57,7 +57,7 @@ through = require('through2'),
 gutil = require('gulp-util'),
 browserify = require('browserify'),
 babel = require('babelify'),
-//plumber = require('gulp-plumber'),
+plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
 lazypipe = require('lazypipe'),
 chokidar = require('chokidar'),
@@ -173,6 +173,7 @@ gulp.task('css', 'Compile css from LESS', cssTask);
 function cssTask(){
 	//console.log(configure.stylesheet);
 	return gulp.src(configure.stylesheet, {cwd: configure.root})
+		.pipe(plumber())
 		.pipe(less({
 			paths: [
 				configure.root, 

@@ -25,6 +25,7 @@
     "gulp-less": "^3.0.0",
     "gulp-minify-css": "^0.4.5",
     "gulp-minify-html": "^1.0.1",
+    "gulp-plumber": "^1.0.1",
     "gulp-rename": "^1.2.0",
     "gulp-replace": "^0.5.3",
     "gulp-size": "^1.2.0",

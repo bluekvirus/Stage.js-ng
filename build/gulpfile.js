@@ -302,7 +302,7 @@ gulp.task('clean', 'Purge the output folder', function cleanTask(){
 //=====
 //dance (through requirejs amd)
 //=====
-gulp.task('dance', 'Create shadow links to src and continue dev after shallow build', function danceTask(){
+gulp.task('dance', 'Create shadow links to src and continue dev after shallow build', ['js'], function danceTask(){
 
 	//only available in production mode
 	if(configure.production) return;

@@ -154,9 +154,17 @@
 
 		trigger: function(){
 			if(this.$el) {
-				this.$el.trigger.apply(this.$el, arguments);
+				//note that we use triggerHandler instead of trigger to avoid custom event bubbling
+				this.$el.triggerHandler.apply(this.$el, arguments);
 			}
 		},
+
+		$trigger: function(){
+			if(this.$el) {
+				//allow event bubbling
+				this.$el.trigger.apply(this.$el, arguments);
+			}
+		}
 	});
 	//static methods
 	_.extend(View, {
@@ -232,8 +240,9 @@
 		//don't use define here... the cb will never gets invoked. (until what's define()-ed gets required)
 		require(targets, function(tpl, js){
 			js = js || {};
-			cb(app.ve.component(compName, _.extend(js, {template: tpl})));
-		});
+			//success cb
+			cb(null, app.ve.component(compName, _.extend(js, {template: tpl})));
+		}, cb);//as error cb
 	};
 
 })(_, jQuery, Application, Mustache);

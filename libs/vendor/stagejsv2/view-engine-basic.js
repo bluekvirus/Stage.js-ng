@@ -110,6 +110,7 @@
 			if(this.$el) {
 				//teardown previous view if template is different.
 				var meta = this.$el.data();
+				if(!meta) app.throw('Invalid $el upon ' + (this._name || 'view') + '.render(), check your el selector...');
 				if(meta.view && (meta.view.template !== this.template))
 					meta.view.teardown();
 
@@ -221,7 +222,7 @@
 			app.ve.components[name] = app.ve.components[name].extend(configure);
 		} else
 			//register
-			app.ve.components[name] = View.extend(configure);
+			app.ve.components[name] = View.extend(_.extend({_name: name}, configure));
 		return app.ve.components[name];
 	};
 

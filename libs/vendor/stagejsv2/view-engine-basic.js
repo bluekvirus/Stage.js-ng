@@ -21,7 +21,7 @@
  * 		[events]:
  * })
  * 2. view.render(data, [$el])
- * 3. view.on/trigger/once/off()
+ * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
  * 6. view.bind() TBI (two-way with binders in tpl)
@@ -90,12 +90,18 @@
 	_.extend(View.prototype, {
 		init: _.noop,
 
-		render: function($el, data){
+		render: function(data, $el){
 
 			//check the template first!
 			if(!this.template) app.throw('View definition requires a template!');
 			var tpl = app.templates[this.template] || app.templates[this.template + app.ve._tplSuffix] || this.template;
 			
+			//sanitize params
+			if(data instanceof jQuery){
+				$el = data;
+				data = undefined;
+			}
+
 			this.$el = $el || this.$el;
 			this.data = data || this.data;
 
@@ -219,7 +225,8 @@
 		return app.ve.components[name];
 	};
 
-	app.ve.inject = function(options, cb){
+		//internal worker for ve.inject (single target, cb(err, result))
+	function _inject (options, cb){
 		if(!app.isAMDEnabled()) app.throw('AMD is not enabled, use task:dance before ve.inject()');
 		if(_.isString(options))
 			options = {path: options};
@@ -240,9 +247,17 @@
 		//don't use define here... the cb will never gets invoked. (until what's define()-ed gets required)
 		require(targets, function(tpl, js){
 			js = js || {};
-			//success cb
+			//as success cb
 			cb(null, app.ve.component(compName, _.extend(js, {template: tpl})));
 		}, cb);//as error cb
+	}
+	//dynamically inject js + html to make a View or multiple View(s)
+	app.ve.inject = function (options, cb){
+		if(_.isArray(options)){
+			app.coordinator.async.map(options, _inject, cb);
+		} else {
+			_inject(options, cb);
+		}
 	};
 
 })(_, jQuery, Application, Mustache);

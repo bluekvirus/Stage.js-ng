@@ -12,7 +12,7 @@
 	app.config({
 		routes: {
 			//default routing implementation (forward the navigation e, params):
-			'/:context/?([^\/]*)/?(.*)': function(ctx, item, rest){
+			'([^\/]*)\/?([^\/]*)\/?(.*)': function(ctx, item, rest){
 				app.coordinator.trigger('app.navigate', ctx, item, rest); //--> <*required>
 			}			
 		},

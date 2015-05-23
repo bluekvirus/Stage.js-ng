@@ -47,7 +47,7 @@
 		debug: function(){
 			//as console.log wrapper
 			if(app.param('debug') === 'true')
-				return console.log.apply(console.log, arguments);
+				return console.log.apply(console, arguments);
 		},
 
 		throw: function(e){

@@ -18,7 +18,7 @@
  * 		[init]: function(){...}
  * 		[$el]:
  * 		[data]:
- * 		[events]:
+ * 		[events]: '<e> <selector>': fn(e) {$(this), e.data.view}
  * })
  * 2. view.render(data, [$el])
  * 3. view.on/($)trigger/once/off()
@@ -116,11 +116,20 @@
 
 				//re-render but not registering the listeners again.
 				this.$el.html(content);
+				this.$el.data('view', this);
 				if(!this.$el.data('_events_')) {
-					this.$el.on(this.events);
+					//format <e> <selectors>, instead of <e1> <e2> ...
+					_.each(this.events, function(fn, namenselector){
+						var tmp = _.compact(namenselector.split(' '));
+						name = tmp.shift();
+						if(_.size(tmp))
+							this.$el.on(name, tmp.join(' '), {view: this.$el.data('view')}, fn);
+						else
+							this.$el.on(name, {view: this.$el.data('view')}, fn);
+					}, this);
+					
 					this.$el.data('_events_', true);
 				}
-				this.$el.data('view', this);
 			}
 			else return content;
 
@@ -240,6 +249,11 @@
 			tplOnly: false,
 			forceName: ''
 		}, options);
+		//allow :static in option.path to indicate tplOnly
+		if(_.endsWith(options.path, ':static')){
+			options.tplOnly = true;
+			options.path = options.path.replace(/:static$/, '');
+		}
 		var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
 		var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
 		jsTarget = tplTarget.replace(app.ve._tplSuffix, '');

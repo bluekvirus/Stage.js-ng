@@ -18,7 +18,7 @@
  * 		[init]: function(){...}
  * 		[$el]:
  * 		[data]:
- * 		[events]: '<e> <selector>': fn(e) {$(this), e.data.view}
+ * 		[events]: '<e> <selector>': 'fn' or fn(e) {$(this), e.data.view}
  * })
  * 2. view.render(data, [$el])
  * 3. view.on/($)trigger/once/off()
@@ -120,6 +120,7 @@
 				if(!this.$el.data('_events_')) {
 					//format <e> <selectors>, instead of <e1> <e2> ...
 					_.each(this.events, function(fn, namenselector){
+						if(_.isString(fn)) fn = this[fn];
 						var tmp = _.compact(namenselector.split(' '));
 						name = tmp.shift();
 						if(_.size(tmp))

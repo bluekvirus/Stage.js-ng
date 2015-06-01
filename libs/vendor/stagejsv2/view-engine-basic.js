@@ -25,7 +25,7 @@
  * 4. view.teardown()
  * 5. View.extend({...})
  * 6. view.bind() TBI (two-way with binders in tpl)
- * 7. view.vm (available after view.bind())
+ * 7. view.vm TBI (available after view.bind())
  * 
  *
  * Life cycle

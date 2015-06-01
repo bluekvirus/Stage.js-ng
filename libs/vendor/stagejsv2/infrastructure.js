@@ -182,7 +182,7 @@
 	//application object
 	var app = {
 		$container: $('#app'),
-		home: 'home', //-->#home if route empty.
+		home: 'home', //-->/#home if route empty. (see navigation-director.js)
 		com: {
 			ajax: $.ajax
 		},
@@ -219,9 +219,6 @@
 			$window.scroll(function(){
 				app.coordinator.trigger('app.scroll');
 			});
-
-			//b. default route
-			window.location.hash = window.location.hash || app.home;
 
 			this.coordinator.trigger('app.initialize'); //--> [extend]
 		},

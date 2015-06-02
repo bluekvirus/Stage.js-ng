@@ -183,9 +183,6 @@
 	var app = {
 		$container: $('#app'),
 		home: 'home', //-->/#home if route empty. (see navigation-director.js)
-		com: {
-			ajax: $.ajax
-		},
 
 		//0. config (careful, it will override app it self)
 		config: function(newcfg){

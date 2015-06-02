@@ -17,7 +17,7 @@
  * 5. compress: minify and gzip the *.js and *.css in the output folder.
  * 6. clean: clear the output folder.
  * 7. watch: watching changes and re-run js, css and tpl tasks.
- * 8. dance: continue development after shallow build, using requirejs.
+ * 8. amd: continue development after build, using requirejs.
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
  *
@@ -28,8 +28,7 @@
  * Note
  * ----
  * 1. Javascripts will always be **linted** and css will always be **autoprefixed** and **cleaned**.
- * 2. To auto minify and gzip requires setting the production flag to true in configure. (manual task: compress)
- * 3. use `gulp --config [name] [task]` to load a different configure per task run.
+ * 2. use `gulp --config [name] [task]` to load a different configure per task run.
  * 
  * 
  * @author Tim Lauv
@@ -61,27 +60,47 @@ plumber = require('gulp-plumber'),
 mergeStream = require('merge-stream'),
 lazypipe = require('lazypipe'),
 chokidar = require('chokidar'),
+gulpif = require('gulp-if'),
 del = require('del');
 
 //---------------Configure--------------
 //+ option to gulp cmd for loading different configures (trick using yargs).
-var argv = require('yargs').option('C', {
-	alias: 'config',
-	describe: 'Specify a customized configure file to override base ones.',
-	default: '_base'
+var argv = require('yargs').options({
+	'C': {
+		alias: 'config',
+		describe: 'Specify a customized configure file to override base ones.',
+		default: '_base'
+	},
+	'P': {
+		alias: 'production',
+		describe: 'Further controls behaviors of compress and amd tasks.',
+		default: false
+	},
+	'K': {
+		alias: 'keep',
+		describe: 'Whether to keep original .js/css/html files during compress.',
+		default: false
+	}
 }).argv;
+if(argv.h || argv.help) {
+	console.log('Use', 'gulp help'.yellow, 'instead...');
+	//require('child_process').spawnSync('gulp', ['help'], {stdio: 'inherit'}); v0.12.x
+	process.exit();
+}
+
 // load the targeted configure.
 var configure = require(path.join(__dirname, 'config', argv.C));
 configure.root = configure.root || path.join(__dirname, '..');
+configure.production = argv.P;
 console.log('Using configure:', argv.C.yellow);
 
 
 //----------------Tasks-----------------
 //=======
-//default (without compress)
+//default (without compress, amd)
 //=======
 gulp.task('default', false, 
-	_.compact(['clean', 'js', 'tpl', 'css', 'assets', configure.production?'compress':false])
+	_.compact(['clean', 'js', 'tpl', 'css', 'assets'])
 );
 
 
@@ -183,7 +202,7 @@ function cssTask(){
 
 		}))
 		.pipe(autoprefixer(configure.plugins.autoprefixer))
-		.pipe(rename({dirname: 'css'}))
+		.pipe(rename({dirname: 'css', basename: 'app'}))
 		.pipe(size({showFiles: true, title: 'css'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
 }
@@ -208,9 +227,15 @@ function assetsTask(){
 	);
 
 	_.forIn(renameMap, function(v, k){
-		//copy (k = target file) & rename (v = new dir name)
-		merged.add(gulp.src(k, {cwd: configure.root}).pipe(rename({dirname: v}))
-			.pipe(gulp.dest(configure.output, {cwd: configure.root})));
+		//copy (k = target file/folder) & rename (v = new dir name)
+		var isFolder = _.endsWith(k, '/*') || _.endsWith(k, '/**/*');
+		merged.add(gulp.src(k, {cwd: configure.root}).pipe(rename(function(p){
+			//if k is file p.dirname = v, else p.dirname = path.join(v, p.dirname)
+			if(isFolder)
+				p.dirname = path.join(v, p.dirname);
+			else
+				p.dirname = v;
+		})).pipe(gulp.dest(configure.output, {cwd: configure.root})));
 	});
 
 	return merged.pipe(size({showFiles: true, title: 'assets'}));
@@ -260,7 +285,6 @@ gulp.task('watch', 'Watching changes to src/style/template and rebuild', functio
 //compress (+templates.json?)
 //========
 gulp.task('compress', 'Minify and Gzip the js/html/css files', function compressTask(){
-	//console.log(configure.production);
 	var filters = {
 		js: filter('**/*.js'),
 		css: filter('**/*.css'),
@@ -276,11 +300,11 @@ gulp.task('compress', 'Minify and Gzip the js/html/css files', function compress
 		.pipe(filters.css.restore())
 
 		.pipe(filters.html)
-		.pipe(replace(/(\.css|\.js)/g, '.min$1')) //ref the minified version in minified html.
+		.pipe(gulpif(argv.keep, replace(/(\.css|\.js)/g, '.min$1'))) //ref the minified version in minified html.
 		.pipe(minhtml(configure.plugins['minify-html']))
 		.pipe(filters.html.restore())
 
-		.pipe(rename({suffix: '.min'}))
+		.pipe(gulpif(argv.keep, rename({suffix: '.min'})))
 		.pipe(size({showFiles: true, title: 'compress:minify'}))
 		.pipe(gulp.dest(configure.output, {cwd: configure.root}))
 		.pipe(gzip(configure.plugins.gzip))
@@ -301,35 +325,50 @@ gulp.task('clean', 'Purge the output folder', function cleanTask(){
 
 
 //=====
-//dance (through requirejs amd)
+//amd (through requirejs)
+//production: copy /src --> output/amd, require-text.js --> output/js/require-text.js
+//development: link instead of copy.
 //=====
-gulp.task('dance', 'Create shadow links to src and continue dev after shallow build', ['js'], function danceTask(){
+gulp.task('amd', 'Create links to /src and continue dev after build', ['js'], function amdTask(){
 
-	//only available in production mode
-	if(configure.production) return;
-
-	//1. create symlinks according to configure.shadows into configure.output
-	_.each(configure.shadows, function(link, src){
-		var srcpath = path.join(configure.root, src),
-		dstpath = path.join(configure.root, configure.output, path.dirname(link), '_shadow_' + path.basename(link));
-		fs.symlink(srcpath, dstpath, fs.statSync(srcpath).isDirectory()?'dir':'file', function(){
-			console.log('linked'.yellow, srcpath.replace(configure.root, ''), '-->'.grey, dstpath.replace(configure.root, ''));
+	//1. create link or copy of /src and require-text.js
+	var amdFolderName = 'amd';
+	if(!configure.production)
+		_.each({
+			'libs/vendor/requirejs/require-text.js': 'js/require-text.js',
+			'src': amdFolderName
+		}, function(link, src){
+			var srcpath = path.join(configure.root, src),
+			dstpath = path.join(configure.root, configure.output, path.dirname(link), path.basename(link));
+			fs.symlink(srcpath, dstpath, fs.statSync(srcpath).isDirectory()?'dir':'file', function(){
+				console.log('linked'.yellow, srcpath.replace(configure.root, ''), '-->'.grey, dstpath.replace(configure.root, ''));
+			});
+			
 		});
-		
-	});
-
-	//2. change app.js targets to amd wrapper and recompile
-	//TBI: move dancetarget to --target (default:app)
-	var dancetarget = 'app'; //!!HARDCODE!!
-	if(configure.javascript[dancetarget]){ 
-		configure.javascript[dancetarget] = [
-			'libs/vendor/requirejs/require.js',
-			'libs/vendor/requirejs/config.js'
+	else {
+		//remove the symlinks first just in case.
+		del.sync(['js/require-text.js', amdFolderName], {cwd: path.join(configure.root, configure.output), force: true});
+		configure.assets = [
+			{
+				'libs/vendor/requirejs/require-text.js': 'js',
+				'src/**/*': amdFolderName
+			}
 		];
-		jsTask(_.noop, false, [dancetarget]);
+		assetsTask();
 	}
 
-	//3. remove templates.json
+	//2. change app.js targets to amd wrapper and recompile
+	var amdTarget = 'app'; //!!HARDCODE!!
+	if(configure.javascript[amdTarget]){ 
+		configure.javascript[amdTarget] = [
+			'libs/vendor/requirejs/require.js',
+			'libs/vendor/stagejsv2/amd-require.js'
+		];
+		jsTask(_.noop, false, [amdTarget]);
+	}
+
+	//3. clear templates.json
 	configure.templates = [];
 	tplTask();
+
 });

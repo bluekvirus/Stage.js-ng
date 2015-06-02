@@ -205,7 +205,8 @@
 	});
 
 	//-----------------hooks into app infrastructure-------------------
-	//convert templates into components
+	//convert templates into components (support: non-amd development)
+	//use app.ve.component('<same name>', {+listeners}) later to extend view definition.
 	app.coordinator.on('app.load', function(){
 
 		_.each(app.templates, function(tpl, filename){
@@ -236,38 +237,10 @@
 		return app.ve.components[name];
 	};
 
-		//internal worker for ve.inject (single target, cb(err, result))
-	function _inject (options, cb){
-		if(!app.isAMDEnabled()) app.throw('AMD is not enabled, use task:dance before ve.inject()');
-		if(_.isString(options))
-			options = {path: options};
-		if(_.isFunction(options)){
-			cb = options;
-			options = {};
-		}
-		options = _.extend({
-			baseURL: 'vanilla/',
-			tplOnly: false,
-			forceName: ''
-		}, options);
-		//allow :static in option.path to indicate tplOnly
-		if(_.endsWith(options.path, ':static')){
-			options.tplOnly = true;
-			options.path = options.path.replace(/:static$/, '');
-		}
-		var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
-		var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
-		jsTarget = tplTarget.replace(app.ve._tplSuffix, '');
-		var targets = ['text!' + tplTarget];
-		if(!options.tplOnly) targets.push(jsTarget);
-		//don't use define here... the cb will never gets invoked. (until what's define()-ed gets required)
-		require(targets, function(tpl, js){
-			js = js || {};
-			//as success cb
-			cb(null, app.ve.component(compName, _.extend(js, {template: tpl})));
-		}, cb);//as error cb
-	}
-	//dynamically inject js + html to make a View or multiple View(s)
+	//dynamically inject js + html to make a View or multiple View(s) (support: amd development)
+	//['path1', 'path2'] or just 'path' to load path.js & path.tpl.html to be combined into view definition.
+	//use path:static to just load path.tpl.html as component.
+	//use {path: ..., tplOnly: ..., forceName: ..., baseURL: ...} as 'path' for total control.
 	app.ve.inject = function (options, cb){
 		if(_.isArray(options)){
 			app.coordinator.async.map(options, _inject, cb);
@@ -275,5 +248,36 @@
 			_inject(options, cb);
 		}
 	};
+		//internal worker for ve.inject (single target, cb(err, result))
+		function _inject (options, cb){
+			if(!app.isAMDEnabled()) app.throw('AMD is not enabled, use task:amd before ve.inject()');
+			if(_.isString(options))
+				options = {path: options};
+			if(_.isFunction(options)){
+				cb = options;
+				options = {};
+			}
+			options = _.extend({
+				baseURL: app.amd.commonRoot,
+				tplOnly: false,
+				forceName: ''
+			}, options);
+			//allow :static in option.path to indicate tplOnly
+			if(_.endsWith(options.path, ':static')){
+				options.tplOnly = true;
+				options.path = options.path.replace(/:static$/, '');
+			}
+			var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
+			var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
+			jsTarget = tplTarget.replace(app.ve._tplSuffix, '');
+			var targets = ['text!' + tplTarget];
+			if(!options.tplOnly) targets.push(jsTarget);
+			//don't use define here... the cb will never get invoked. (until what's define()-ed gets required)
+			require(targets, function(tpl, js){
+				js = js || {};
+				//as success cb
+				cb(null, app.ve.component(compName, _.extend(js, {template: tpl})));
+			}, cb);//as error cb
+		}
 
 })(_, jQuery, Application, Mustache);

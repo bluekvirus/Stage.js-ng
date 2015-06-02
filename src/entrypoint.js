@@ -1,5 +1,9 @@
 //setup
-app.config();
+app.config({
+	amd: {
+		commonRoot: 'vanilla/'
+	}
+});
 
 //initialize main view
 app.coordinator.on('app.initialize', function(){

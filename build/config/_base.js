@@ -27,10 +27,18 @@
  *
  * *Hint*: how to create another configure file? 
  * ```
- * 		module.exports = require('lodash').merge(require('.default'), {
+ * 		module.exports = require('lodash').merge(require('./_base'), {
  * 			...
  * 		 	...
  *   	});
+ *
+ * 		or
+ *
+ * 		var config = require('./_base.js');
+ * 		config.<item> = ...
+ * 		...
+ *
+ * 		module.exports = config;
  * ```
  * 
  * Gotcha
@@ -60,22 +68,12 @@ module.exports = {
 	//---------------dist path--------------
 	output: 'public',
 
-	//-----------minified & gzipped---------
-	// with .min.html auto ref-ing .min.js/css
-	production: false,
-
 	//------------js (modules/libs)---------
 	// 'entrypoint' compile & bundle as es6 modules (import, expose. re-process during `watch`)
 	// '[...]' as vanilla js concat (won't re-process during `watch`)
 	javascript: {
 		//app.js
 		app: 'src/entrypoint.js',
-
-		//amd during dev? (applied automatically with task:dance)
-		// app: [
-		// 	'libs/vendor/requirejs/require.js',
-		// 	'libs/vendor/requirejs/config.js'
-		// ],
 
 		//libs.js
 		libs: [
@@ -95,8 +93,6 @@ module.exports = {
 			'libs/vendor/stagejsv2/navigation-director.js',
 			//-----------------------------------------
 			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
-			'libs/bower_components/bootstrap-material-design/dist/js/material.js',
-			'libs/bower_components/bootstrap-material-design/dist/js/ripples.js',
 		],
 	},
 
@@ -105,8 +101,8 @@ module.exports = {
 	templates: ['src/**/*.html'],
 
 	//-----------------style----------------
-	// into base.css, (re-compile during `watch`)
-	stylesheet: 'styles/base.less', 
+	// into app.css, (re-compile during `watch`)
+	stylesheet: 'styles/_base.less', 
 
 	//----------------assets----------------
 	//'string' --> as glob, copy as is
@@ -121,19 +117,9 @@ module.exports = {
 		{
 			'libs/bower_components/modernizr/modernizr.js':'js',
 			'libs/bower_components/fontawesome/fonts/*':'fonts',
-			'libs/bower_components/bootstrap/dist/fonts/*': 'fonts',
-			'libs/bower_components/bootstrap-material-design/dist/fonts/*': 'fonts'
+			'libs/bower_components/bootstrap/dist/fonts/*': 'fonts'
 		},
 	],
-
-	//---------------symlinks---------------
-	//create symbolic links to output folder (non-production mode)
-	//names will be prefixed by _shadow_ (e.g dir/_shadow_basename)
-	//Don't change unless sure about...
-	shadows: {
-		'libs/vendor/requirejs/require-text.js': 'js/require-text.js',
-		'src': 'src'
-	},
 
 	//----------gulp plugin configs---------
 	//Don't change unless sure about...
@@ -175,6 +161,7 @@ module.exports = {
 		glob: {
 			js: 'src/**/*.js',
 			css: 'styles/**/*.less',
+			//templates: as in config.templates
 		}
 	}
 };

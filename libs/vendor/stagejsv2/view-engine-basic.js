@@ -112,7 +112,7 @@
 		render: function(data, $el){
 
 			//check the template first!
-			if(!this.template) app.throw('View definition requires a template!');
+			if(!this.template) app.throw(this.getComponentName() + ' requires a template!');
 			var tpl = app.templates[this.template] || app.templates[this.template + app.ve._tplSuffix] || this.template;
 			
 			//sanitize params
@@ -121,50 +121,55 @@
 				data = undefined;
 			}
 
-			this.$el = $el || this.$el;
-			this.data = data || this.data;
+			//guard the $el that we about to render on, forbid swapping $el upon render.
+			if($el){
+				if(!this.$el)
+					this.$el = $el;
+				else if(this.$el[0] !== $el[0])
+					app.throw(this.getComponentName() + ' instance already rendered at ' + this.$el[0]);
+			}
+			if(!this.$el)
+				app.throw('You must have a valid DOM el for ' + this.getComponentName() + ' to render()...');
 
+			//always merge new data instead of replacing completely, use view.data = data to do that.
+			if(data)
+				this.data = _.merge(this.data || {}, data);
 			var content = Mustache.render(tpl, this.data);
 
-			if(this.$el) {
-				//teardown previous view if template is different.
-				var meta = this.$el.data();
-				if(!meta) app.throw('Invalid $el upon ' + (this._name || 'view') + '.render(), check your el selector...');
-				if(meta.view && (meta.view.template !== this.template))
-					meta.view.teardown();
+			//teardown previous view if template is different.
+			var meta = this.$el.data();
+			if(!meta) app.throw('Invalid $el upon ' + this.getComponentName() + '.render(), check your el selector...');
+			if(meta.view && (meta.view.template !== this.template))
+				meta.view.teardown();
 
-				//render 
-				this.$el.html(content);
-				//render sub components
-				var that = this;
-				if(this.deps)
-					this.$el.find('[component]').each(function(i, el){
-						var $el = $(this);
-						var name = $el.attr('component');
-						var Comp = app.ve.get(name);
-						if(that.deps[Comp.prototype._name]) {
-							new Comp({el: el});
-						}
-					});
-				this.$el.data('view', this);
-				//re-render but not registering the listeners again.
-				if(!this.$el.data('_events_')) {
-					//format <e> <selectors>, instead of <e1> <e2> ...
-					_.each(this.events, function(fn, namenselector){
-						if(_.isString(fn)) fn = this[fn];
-						var tmp = _.compact(namenselector.split(' '));
-						name = tmp.shift();
-						if(_.size(tmp))
-							this.$el.on(name, tmp.join(' '), {view: this.$el.data('view')}, fn);
-						else
-							this.$el.on(name, {view: this.$el.data('view')}, fn);
-					}, this);
-					
-					this.$el.data('_events_', true);
-				}
-			}
-			else {
-				app.throw('You must have a valid DOM el for ' + this._name || 'View');
+			//render 
+			this.$el.html(content);
+			//render sub components
+			var that = this;
+			if(this.deps)
+				this.$el.find('[component]').each(function(i, el){
+					var $el = $(this);
+					var name = $el.attr('component');
+					var Comp = app.ve.get(name);
+					if(that.deps[Comp.prototype._name]) {
+						new Comp({el: el});
+					}
+				});
+			this.$el.data('view', this);
+			//re-render but not registering the listeners again.
+			if(!this.$el.data('_events_')) {
+				//format <e> <selectors>, instead of <e1> <e2> ...
+				_.each(this.events, function(fn, namenselector){
+					if(_.isString(fn)) fn = this[fn];
+					var tmp = _.compact(namenselector.split(' '));
+					name = tmp.shift();
+					if(_.size(tmp))
+						this.$el.on(name, tmp.join(' '), {view: this.$el.data('view')}, fn);
+					else
+						this.$el.on(name, {view: this.$el.data('view')}, fn);
+				}, this);
+				
+				this.$el.data('_events_', true);
 			}
 
 			this.trigger('render');
@@ -214,6 +219,11 @@
 				//allow event bubbling
 				this.$el.trigger.apply(this.$el, arguments);
 			}
+		},
+
+		//utilities
+		getComponentName: function(){
+			return this._name || '_Anonymous_';
 		}
 	});
 	//static methods

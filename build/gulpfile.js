@@ -17,7 +17,7 @@
  * 5. compress: minify and gzip the *.js and *.css in the output folder.
  * 6. clean: clear the output folder.
  * 7. watch: watching changes and re-run js, css and tpl tasks.
- * 8. amd: continue development after build, using requirejs.
+ * 8. amd: continue development after build, using requirejs. (--production to copy /src instead of symlink it)
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
  *
@@ -329,6 +329,8 @@ gulp.task('clean', 'Purge the output folder', function cleanTask(){
 //amd (through requirejs)
 //production: copy /src --> output/amd, require-text.js --> output/js/require-text.js
 //development: link instead of copy.
+//
+//Note: you can't change the path to the src folder yet, this task will always try /src.
 //=====
 gulp.task('amd', 'Create links to /src and continue dev after build', ['js'], function amdTask(){
 

@@ -1,6 +1,7 @@
-define({
-	init: function(options){
+app.ve.component(['banner:static'], {
+	init: function(options, ready){
 		app.coordinator.trigger('app.mainview-initialized');
+		ready();
 	},
 	events: {
 		'render': function(){

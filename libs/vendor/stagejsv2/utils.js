@@ -19,9 +19,10 @@
 			suffix = suffix || '.tpl.html';
 			var componentPath = filename.replace(suffix, '');
 			if(_.endsWith(componentPath, 'index')) componentPath = componentPath.replace('index', '');
-			app.debug(filename, '=>', componentPath);
+			componentPath = _.capitalize(_.camelCase(componentPath));
+			app.debug('resolve name/path to component', filename, '=>', componentPath);
 
-			return _.capitalize(_.camelCase(componentPath));
+			return componentPath;
 		},
 
 		//debug logging/exception throwing shortcut

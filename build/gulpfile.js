@@ -29,6 +29,7 @@
  * ----
  * 1. Javascripts will always be **linted** and css will always be **autoprefixed** and **cleaned**.
  * 2. use `gulp --config [name] [task]` to load a different configure per task run.
+ * 3. Normal build sequence `gulp -C <config>` --> [`gulp -C <config> amd`] --> `gulp -C <config> compress`
  * 
  * 
  * @author Tim Lauv

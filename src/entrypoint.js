@@ -1,5 +1,6 @@
 //setup
 app.config({
+	//normally you don't need this configure, this is just in case you want to put src into a sub-folder.
 	amd: {
 		commonRoot: 'vanilla/'
 	}
@@ -7,7 +8,7 @@ app.config({
 
 //initialize main view
 app.coordinator.on('app.initialize', function(){
-	new app.ve.components.Main({el: app.$container});
+	new (app.ve.get('main'))({el: app.$container});
 	app.coordinator.trigger('app.initialized');
 });
 

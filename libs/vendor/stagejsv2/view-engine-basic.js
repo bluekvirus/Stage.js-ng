@@ -4,9 +4,11 @@
  * Plugins (to app)
  * ----------------
  * app.ve
+ * app.ve._components
  * app.ve.view
- * app.ve.component
- * app.ve.components
+ * app.ve.component (name, configure) or ([deps], configure)
+ * app.ve.get
+ * app.ve.list
  * app.ve.inject
  * $(el).data('view')
  *
@@ -15,7 +17,7 @@
  * -----------
  * 1. new View({
  * 		template: [name],
- * 		[init]: function(){...}
+ * 		[init]: function(options, ready){...; ready();}
  * 		[$el]:
  * 		[data]:
  * 		[events]: '<e> <selector>': 'fn' or fn(e) {$(this), e.data.view}
@@ -24,20 +26,31 @@
  * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
- * 6. view.bind() TBI (two-way with binders in tpl)
- * 7. view.vm TBI (available after view.bind())
+ * 6. view.deps - sub-component names map e.g {Comp: true, Comp2: true} 
+ * 7. view.bind() TBI (two-way with binders in tpl)
+ * 8. view.vm TBI (available after view.bind())
  * 
  *
- * Life cycle
- * ----------
- * init() --> render(e) --> render(e) ... --> teardown(e)
- * 
- * *Note*: that due to implemenation constrains (using $el for events) init() will not emit any `initialize` event.
+ * Lifecycle and Events
+ * ---------------------
+ * init(options, ready) --> render(e) --> render(e) ... --> teardown(e)
+ *
+ * Note: There are only 2 life-cycle events: `render` and `teardown`.
+ * Note: Don't forget to call ready() if overriding the default init().
+ *
+ *
+ * Sub Components
+ * --------------
+ * If you defined view.deps and mark regions in your template like
+ * <div component="..."></div>
+ * It will be replaced by that component.
+ *
+ * To pre-load the dependency componments in amd mode, use app.ve.component([depA, depB], {configure}).
  * 
  * 
  * Ghost View
  * ----------
- * 1. only views with `$el` can be rendered on screen, otherwise html is returned by `.render()`;
+ * 1. only views with `$el` can be rendered on screen, otherwise an exception with be raised;
  * 2. only `template` name is required when defining a View, `data` and `$el` can be inserted later using `.render()`;
  * 3. only views with `$el` can register events;
  * 4. rendering same view again and again will not re-register the listeners;
@@ -69,7 +82,7 @@
 	app.ve = {name: 'Basic', _tplSuffix: '.mst.html'};
 
 	//--------------------------------View class definition---------------------------------
-	//.template, .$el, .data, init() .render(e), .teardown(e), .events, .once/on/off/trigger()
+	//.template, .$el, .data, init(options, cb) .render(e), .teardown(e), .events, .once/on/off/trigger()
 	//constructor (logic-free)
 	var View = function(options){
 		this._options = options || {};
@@ -83,12 +96,18 @@
 		this.template = this._options.template || this.template;
 
 		//extension point
-		this.init(this._options);
-		if(this.$el) this.render();
+		var that = this;
+		//add a ready() callback to init
+		this.init(this._options, function(){
+			if(that.$el) that.render();
+		});
+		
 	};
 	//member methods
 	_.extend(View.prototype, {
-		init: _.noop,
+		init: function(options, ready){
+			ready();
+		},
 
 		render: function(data, $el){
 
@@ -114,9 +133,21 @@
 				if(meta.view && (meta.view.template !== this.template))
 					meta.view.teardown();
 
-				//re-render but not registering the listeners again.
+				//render 
 				this.$el.html(content);
+				//render sub components
+				var that = this;
+				if(this.deps)
+					this.$el.find('[component]').each(function(i, el){
+						var $el = $(this);
+						var name = $el.attr('component');
+						var Comp = app.ve.get(name);
+						if(that.deps[Comp.prototype._name]) {
+							new Comp({el: el});
+						}
+					});
 				this.$el.data('view', this);
+				//re-render but not registering the listeners again.
 				if(!this.$el.data('_events_')) {
 					//format <e> <selectors>, instead of <e1> <e2> ...
 					_.each(this.events, function(fn, namenselector){
@@ -132,7 +163,9 @@
 					this.$el.data('_events_', true);
 				}
 			}
-			else return content;
+			else {
+				app.throw('You must have a valid DOM el for ' + this._name || 'View');
+			}
 
 			this.trigger('render');
 			return this;
@@ -222,22 +255,50 @@
 	});
 	
 	//----------------apis enhancement to app-------------------------
+	//return a quick view instance
 	app.ve.view = function(options){
 		return new View(options);
 	};
 
-	app.ve.components = {};
-	app.ve.component = function(name, configure){
-		if(app.ve.components[name]) {
-			//override 
-			app.ve.components[name] = app.ve.components[name].extend(configure);
-		} else
-			//register
-			app.ve.components[name] = View.extend(_.extend({_name: name}, configure));
-		return app.ve.components[name];
+	//view definition registry
+	app.ve._components = {};
+	//view definition lookup
+	app.ve.get = function(nameOrPath){
+		return app.ve._components[nameOrPath] || app.ve._components[app.tplNameToCompName(nameOrPath, app.ve._tplSuffix)];
+	};
+	app.ve.list = function(){
+		return _.keys(app.ve._components);
 	};
 
-	//dynamically inject js + html to make a View or multiple View(s) (support: amd development)
+	//defines a view blueprint (support: both static and amd development)
+	app.ve.component = function(name, configure){
+
+		//amd mode, [deps] + configure (register upon inject)
+		if(_.isArray(name) || !configure){
+			if(app.isAMDEnabled()){
+				if(_.isArray(name)){
+					return define(_.extend(configure, {
+						deps: name //delay injection of sub components till app.ve.inject... (tech constrain: amd.define())
+					}));
+				}else {
+					return define.apply(define, arguments);
+				}
+			}
+			app.throw('Non-amd mode or Malformed view definition...');
+		}
+
+		//static mode, name + configure (performance: using _components directly)
+		if(app.ve._components[name]) {
+			//override 
+			app.ve._components[name] = app.ve._components[name].extend(configure);
+		} else
+			//register
+			app.ve._components[name] = View.extend(_.extend({_name: name}, configure));
+		return app.ve._components[name];
+
+	};
+
+	//dynamically inject js + html to register a View or multiple View(s) (support: amd development)
 	//['path1', 'path2'] or just 'path' to load path.js & path.tpl.html to be combined into view definition.
 	//use path:static to just load path.tpl.html as component.
 	//use {path: ..., tplOnly: ..., forceName: ..., baseURL: ...} as 'path' for total control.
@@ -268,6 +329,8 @@
 				options.path = options.path.replace(/:static$/, '');
 			}
 			var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
+			if(!app.param('debug') && app.ve.get(compName)) return;//components cache hit
+
 			var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
 			jsTarget = tplTarget.replace(app.ve._tplSuffix, '');
 			var targets = ['text!' + tplTarget];
@@ -276,7 +339,25 @@
 			require(targets, function(tpl, js){
 				js = js || {};
 				//as success cb
-				cb(null, app.ve.component(compName, _.extend(js, {template: tpl})));
+				if(js.deps)
+					//recursively inject the sub components
+					app.ve.inject(js.deps, function(err, Comps){
+						if(err) cb(err);
+						else {
+							Comps.push(
+								app.ve.component(compName, _.extend(js, {
+									template: tpl,
+									deps: _.reduce(Comps, function(deps, Comp){
+										deps[Comp.prototype._name] = true;
+										return deps;
+									}, {})
+								}))
+							);
+							cb(null, Comps);
+						}
+					});
+				else
+					cb(null, app.ve.component(compName, _.extend(js, {template: tpl})));
 			}, cb);//as error cb
 		}
 

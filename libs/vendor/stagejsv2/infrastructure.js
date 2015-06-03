@@ -41,6 +41,9 @@
  * plugin: view-engine
  * - .ve.view
  * - .ve.component
+ * - .ve.get
+ * - .ve.list
+ * - .ve.inject
  * 
  *
  * Properties
@@ -61,7 +64,7 @@
  *
  * plugin: view-engine
  * - .ve
- * - .ve.components
+ * - .ve._components
  * 
  * - [.state]
  *
@@ -79,7 +82,7 @@
  * $(function(){app.start();});
  *      
  * app.coordinator.on('app.navigate', function(ctx, item, rest){
- * 	console.log('@context', ctx, '@item', item, '@rest', rest);
+ * 	app.debug('@context', ctx, '@item', item, '@rest', rest);
  * });
  * ```
  * 

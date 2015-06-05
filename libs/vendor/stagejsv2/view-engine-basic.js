@@ -23,7 +23,7 @@
  * 		[$el]:
  * 		[data]:
  * 		[events]: '<e> <selector>': 'fn' or fn(e) {$(this), e.data.view}
- * 		[coop]: TBI global events forwarding...
+ * 		[coop]: global events forwarding...
  * })
  * 2. view.render(data, [$el])
  * 3. view.on/($)trigger/once/off()
@@ -83,7 +83,7 @@
  * @created 2015.04.27
  */
 (function(_, $, app, Mustache){
-	app.ve = {name: 'Basic', _tplSuffix: '.mst.html'};
+	app.ve = {_name: 'Basic', _tplSuffix: '.mst.html', _TemplateEngine: Mustache};
 
 	//--------------------------------View class definition---------------------------------
 	//.template, .$el, .data, init(options, cb) .render(e), .teardown(e), .events, .once/on/off/trigger()
@@ -91,7 +91,7 @@
 	var View = function(options){
 		this._options = options || {};
 		
-		//optional
+		//optional (overriden upon instanciation)
 		this.$el = this._options.el && $(this._options.el);
 		this.$el = this._options.$el || this.$el;
 		this.data = this._options.data || this.data;
@@ -100,15 +100,32 @@
 		this.template = this._options.template || this.template;
 
 		//give each instance a unique id
-		this._uid = _.uniqueId(app.ve.name.toLowerCase() + '_');
+		this._uid = _.uniqueId(app.ve._name.toLowerCase() + '_');
 
-		//extension point (so you can load remote resources)
-		//add a ready() callback to init
 		var that = this;
+		//extension point: init() (so you can load remote resources)
+		//add a ready() callback to init
 		this.init(this._options, function(){
 			//render it right away upon creation if we know $el
 			if(that.$el) that.render();
 		});
+		//extension point: coop (so you can have global events forwarded to this view)
+		_.each(this.coop, function(ge){
+			var self = this;
+			function postman(){
+				if(self.isInDOM()){
+					var args = _.toArray(arguments);
+					args.unshift(ge);
+					self.trigger.apply(self, args);
+				}
+				else {
+					if(app.ve._rendered[self.getUID]){
+						app.coordinator.off(ge, postman);
+					}
+				}
+			}
+			app.coordinator.on(ge, postman);
+		}, this);
 		
 	};
 	//member methods
@@ -142,7 +159,7 @@
 			//always merge new data instead of replacing completely, use view.data = data to do that.
 			if(data)
 				this.data = _.merge(this.data || {}, data);
-			var content = Mustache.render(tpl, this.data);
+			var content = app.ve._TemplateEngine.render(tpl, this.data);
 
 			//teardown previous view if template is different.
 			var meta = this.$el.data();
@@ -217,17 +234,31 @@
 			}
 		},
 
+		//allows both (e, [ extraparams array/object]) and (e, extraparam1, extraparam2, ...)
 		trigger: function(){
 			if(this.$el) {
+				var args = arguments;
+				//since $.triggerHandler only accepts (e, [...])
+				if(arguments.length > 2) {
+					var tmp = _.toArray(arguments);
+					args = new Array(tmp.shift(), tmp);
+				}
 				//note that we use triggerHandler instead of trigger to avoid custom event bubbling
-				this.$el.triggerHandler.apply(this.$el, arguments);
+				this.$el.triggerHandler.apply(this.$el, args);
 			}
 		},
 
+		//allows both (e, [ extraparams array/object]) and (e, extraparam1, extraparam2, ...)
 		$trigger: function(){
 			if(this.$el) {
+				var args = arguments;
+				//since $.trigger only accepts (e, [...])
+				if(arguments.length > 2) {
+					var tmp = _.toArray(arguments);
+					args = new Array(tmp.shift(), tmp);
+				}
 				//allow event bubbling
-				this.$el.trigger.apply(this.$el, arguments);
+				this.$el.trigger.apply(this.$el, args);
 			}
 		},
 

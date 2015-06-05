@@ -64,7 +64,8 @@
  *
  * plugin: view-engine
  * - .ve
- * - .ve._components
+ * - .ve._components (_name: Class)
+ * - .ve._rendered (_uid: $el)
  * 
  * - [.state]
  *

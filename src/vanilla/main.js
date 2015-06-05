@@ -1,4 +1,4 @@
-app.ve.component(['banner:static'], {
+app.ve.component(['banner'], {
 	init: function(options, ready){
 		app.coordinator.trigger('app.mainview-initialized');
 		ready();

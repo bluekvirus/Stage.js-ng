@@ -4,6 +4,7 @@
  * Plugins (to app)
  * ----------------
  * app.ve
+ * app.ve._rendered
  * app.ve._components
  * app.ve.view
  * app.ve.component (name, configure) or ([deps], configure)
@@ -16,19 +17,22 @@
  * Use of View
  * -----------
  * 1. new View({
- * 		template: [name],
+ * 		template: name or <...>
+ * 		[deps]: sub-components used in template < component="..." >
  * 		[init]: function(options, ready){...; ready();}
  * 		[$el]:
  * 		[data]:
  * 		[events]: '<e> <selector>': 'fn' or fn(e) {$(this), e.data.view}
+ * 		[coop]: TBI global events forwarding...
  * })
  * 2. view.render(data, [$el])
  * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
- * 6. view.deps - sub-component names map e.g {Comp: true, Comp2: true} 
- * 7. view.bind() TBI (two-way with binders in tpl)
- * 8. view.vm TBI (available after view.bind())
+ * 6. view.deps - sub-component names map e.g {Comp: true, Comp2: true}
+ * 7. view.getComponentName()/getUID()/isInDOM()
+ * 8. view.bind() TBI (two-way with binders in tpl)
+ * 9. view.vm TBI (available after view.bind())
  * 
  *
  * Lifecycle and Events
@@ -95,10 +99,14 @@
 		this.events = this._options.events || this.events;
 		this.template = this._options.template || this.template;
 
-		//extension point
-		var that = this;
+		//give each instance a unique id
+		this._uid = _.uniqueId(app.ve.name.toLowerCase() + '_');
+
+		//extension point (so you can load remote resources)
 		//add a ready() callback to init
+		var that = this;
 		this.init(this._options, function(){
+			//render it right away upon creation if we know $el
 			if(that.$el) that.render();
 		});
 		
@@ -172,6 +180,7 @@
 				this.$el.data('_events_', true);
 			}
 
+			app.ve._rendered[this._uid] = this.$el;
 			this.trigger('render');
 			return this;
 		},
@@ -182,6 +191,7 @@
 				this.$el.empty();
 				this.trigger('teardown');
 				this.off();
+				delete app.ve._rendered[this._uid];
 			}
 		},
 
@@ -224,6 +234,15 @@
 		//utilities
 		getComponentName: function(){
 			return this._name || '_Anonymous_';
+		},
+
+		getUID: function(){
+			return this._uid;
+		},
+
+		isInDOM: function(){
+			if(!this.$el) return false;
+			return $.contains(document.documentElement, this.$el[0]);
 		}
 	});
 	//static methods
@@ -265,6 +284,9 @@
 	});
 	
 	//----------------apis enhancement to app-------------------------
+	//view instance cache (might not be accurate for nested components)
+	app.ve._rendered = {};
+
 	//return a quick view instance
 	app.ve.view = function(options){
 		return new View(options);

@@ -22,21 +22,28 @@
  * 		[init]: function(options, ready){...; ready();}
  * 		[$el]:
  * 		[data]:
- * 		[events]: '<e> <selector>': 'fn' or fn(e) {$(this), e.data.view}
+ * 		[events]: '<e> <selector>': 'fn' or fn(e, exarg1, exarg2) {$(this), e.data.view}
  * 		[coop]: global events forwarding...
  * })
  * 2. view.render(data, [$el])
  * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
- * 6. view.deps - sub-component names map e.g {Comp: true, Comp2: true}
- * 7. view.getComponentName()/getUID()/isInDOM()
- * 8. view.bind() TBI (two-way with binders in tpl)
- * 9. view.vm TBI (available after view.bind())
+ * 6. view.getComponentName()/getUID()/isInDOM()
+ * 7. view.bind() TBI (two-way with binders in tpl)
+ * 8. view.vm TBI (available after view.bind())
+ *
+ * 
+ * View Properties
+ * ---------------
+ * 1. _name
+ * 2. _uid
+ * 3. _postman
+ * 4. deps - sub-component names map e.g {Comp: true, Comp2: true}
  * 
  *
- * Lifecycle and Events
- * ---------------------
+ * View Lifecycle and Events
+ * -------------------------
  * init(options, ready) --> render(e) --> render(e) ... --> teardown(e)
  *
  * Note: There are only 2 life-cycle events: `render` and `teardown`.
@@ -86,7 +93,8 @@
 	app.ve = {_name: 'Basic', _tplSuffix: '.mst.html', _TemplateEngine: Mustache};
 
 	//--------------------------------View class definition---------------------------------
-	//.template, .$el, .data, init(options, cb) .render(e), .teardown(e), .events, .once/on/off/trigger()
+	//.template, .$el, .data, init(options, cb) .render(data), .teardown(), .events, .once/on/off/trigger()
+	
 	//constructor (logic-free)
 	var View = function(options){
 		this._options = options || {};
@@ -110,9 +118,10 @@
 			if(that.$el) that.render();
 		});
 		//extension point: coop (so you can have global events forwarded to this view)
+		this._postman = {};
 		_.each(this.coop, function(ge){
 			var self = this;
-			function postman(){
+			self._postman[ge] = function(){
 				if(self.isInDOM()){
 					var args = _.toArray(arguments);
 					args.unshift(ge);
@@ -120,11 +129,11 @@
 				}
 				else {
 					if(app.ve._rendered[self.getUID]){
-						app.coordinator.off(ge, postman);
+						app.coordinator.off(ge, self._postman[ge]);
 					}
 				}
-			}
-			app.coordinator.on(ge, postman);
+			};
+			app.coordinator.on(ge, self._postman[ge]);
 		}, this);
 		
 	};
@@ -208,6 +217,11 @@
 				this.$el.empty();
 				this.trigger('teardown');
 				this.off();
+
+				//cleanup related registry. (global events forwarding & rendered instances)
+				_.each(this._postman, function(fn, ge){
+					app.coordinator.off(ge, fn);
+				});
 				delete app.ve._rendered[this._uid];
 			}
 		},

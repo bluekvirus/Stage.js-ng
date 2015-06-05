@@ -78,6 +78,8 @@ module.exports = {
 		//libs.js
 		libs: [
 			'libs/bower_components/jquery/dist/jquery.js',
+			'libs/bower_components/velocity/velocity.js',
+			'libs/bower_components/velocity/velocity.ui.js',
 			'libs/vendor/jquery-ui/position.js',
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/eventemitter2/lib/eventemitter2.js',

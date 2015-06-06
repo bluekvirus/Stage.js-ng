@@ -232,22 +232,21 @@
 		//entry point (support pause-by-each-step mode)
 		//Time this with page/DOM ready, do NOT call it directly.
 		start: function(){
-			var that = this;
-			if(that.coordinator.listeners('app.load').length === 0)
-				that.coordinator.on('app.load', function(){
-					that.coordinator.trigger('app.loaded');
+			if(app.coordinator.listeners('app.load').length === 0)
+				app.coordinator.on('app.load', function(){
+					app.coordinator.trigger('app.loaded');
 				});
-			if(that.coordinator.listeners('app.initialize').length === 0)
-				that.coordinator.on('app.initialize', function(){
-					that.coordinator.trigger('app.initialized');
+			if(app.coordinator.listeners('app.initialize').length === 0)
+				app.coordinator.on('app.initialize', function(){
+					app.coordinator.trigger('app.initialized');
 				});
-			that.coordinator.on('app.loaded', _.after(that.coordinator.listeners('app.load').length, function(){
-				that._init();
+			app.coordinator.on('app.loaded', _.after(app.coordinator.listeners('app.load').length, function(){
+				app._init();
 			}));
-			that.coordinator.on('app.initialized', _.after(that.coordinator.listeners('app.initialize').length, function(){
-				that._ready();
+			app.coordinator.on('app.initialized', _.after(app.coordinator.listeners('app.initialize').length, function(){
+				app._ready();
 			}));
-			that._load();
+			app._load();
 		}
 	};	
 

@@ -110,12 +110,12 @@
 		//give each instance a unique id
 		this._uid = _.uniqueId(app.ve._name.toLowerCase() + '_');
 
-		var that = this;
+		var self = this;
 		//extension point: init() (so you can load remote resources)
 		//add a ready() callback to init
 		this.init(this._options, function(){
 			//render it right away upon creation if we know $el
-			if(that.$el) that.render();
+			if(self.$el) self.render();
 		});
 		//extension point: coop (so you can have global events forwarded to this view)
 		this._postman = {};
@@ -179,13 +179,13 @@
 			//render 
 			this.$el.html(content);
 			//render sub components
-			var that = this;
+			var self = this;
 			if(this.deps)
 				this.$el.find('[component]').each(function(i, el){
 					var $el = $(this);
 					var name = $el.attr('component');
 					var Comp = app.ve.get(name);
-					if(that.deps[Comp.prototype._name]) {
+					if(self.deps[Comp.prototype._name]) {
 						new Comp({el: el});
 					}
 				});

@@ -45,7 +45,7 @@
  *
  * View Lifecycle and Events
  * -------------------------
- * init(options, ready) --> render(e) --> render(e) ... --> teardown(e)
+ * [init(ready())] --> render(e) --> render(e) ... --> teardown(e)
  *
  * Note: There are only 2 life-cycle events: `render` and `teardown`.
  * Note: Don't forget to call ready() if overriding the default init().
@@ -97,7 +97,7 @@
 	app._cache.compiledtpls = {};
 
 	//--------------------------------View class definition---------------------------------
-	//.template, .$el, .data, init(options, cb) .render(data), .teardown(), .events, .once/on/off/trigger()
+	//.template, .$el, .data, init(cb) .render(data), .teardown(), .events, .once/on/off/trigger()
 	
 	//constructor (logic-free, define INSTANCE variables)
 	var View = function(options){
@@ -136,21 +136,22 @@
 			app.coordinator.on(ge, self._postman[ge]);
 		}, this);
 
-		//extension point: init() (so you can load remote resources)
-		//add a ready() callback to init
-		this.init(this._options, function(){
-			//render it right away upon creation if we know $el
-			if(self.$el) self.render();
-		});
+		//setup external init flag
+		if(_.isFunction(this.init))
+			this._initialized = false;//not until init() is called
+		else
+			this._initialized = true;
+
+		//if we already know the $el, render it right away, will revisit init() along the way.
+		if(this.$el) this.render();
 		
 	};
 	//member methods only (no GLOBALLY shared variables)
 	_.extend(View.prototype, {
-		init: function(options, ready){
-			ready();
-		},
+		init: undefined,
 
 		render: function(data, $el){
+			var self = this;
 
 			//check the template first!
 			if(!this.template) app.throw(this.getComponentName() + ' requires a template!');
@@ -172,6 +173,14 @@
 			if(!this.$el)
 				app.throw('You must have a valid DOM el for ' + this.getComponentName() + ' to render()...');
 
+			//check if this instance has been fully initialized, call init(ready()) if not.
+			if(!this._initialized){
+				return this.init(function(){
+					self._initialized = true;
+					self.render(data, $el);
+				});
+			}
+
 			//always merge new data instead of replacing completely, use view.data = data for a complete reset.
 			if(data)
 				this.data = _.merge(this.data || {}, data);
@@ -190,7 +199,6 @@
 			//render 
 			this.$el.html(content);
 			//render sub components
-			var self = this;
 			if(this.deps){
 				//non-amd guard
 				if(_.isArray(this.deps))

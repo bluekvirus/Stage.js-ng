@@ -1,7 +1,7 @@
 app.ve.component(['banner'], {
 	suggestedName: 'Main', //in case we are using static mode instead of amd.
 
-	init: function(options, ready){
+	init: function(ready){
 		app.coordinator.trigger('app.mainview-initialized');
 		ready();
 	},

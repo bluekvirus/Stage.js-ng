@@ -70,11 +70,11 @@ var argv = require('yargs').options({
 	'C': {
 		alias: 'config',
 		describe: 'Specify a customized configure file to override base ones.',
-		default: '_base'
+		default: 'default'
 	},
 	'P': {
 		alias: 'production',
-		describe: 'Further controls behaviors of compress and amd tasks.',
+		describe: 'Further controls behavior of the amd task.',
 		default: false
 	},
 	'K': {

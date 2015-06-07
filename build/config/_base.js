@@ -78,20 +78,29 @@ module.exports = {
 		//libs.js
 		libs: [
 			'libs/bower_components/jquery/dist/jquery.js',
-			'libs/bower_components/velocity/velocity.js',
-			'libs/bower_components/velocity/velocity.ui.js',
 			'libs/vendor/jquery-ui/position.js',
+			'libs/bower_components/velocity/velocity.js', //attr animation
+			'libs/bower_components/velocity/velocity.ui.js', //attr animation-seq
+			'libs/bower_components/kendo-ui-core/src/js/kendo.core.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.data.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.binder.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.fx.js', //effects, effect-q
+			'libs/bower_components/kendo-ui-core/src/js/kendo.userevents.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.draganddrop.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.sortable.js',
 			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/eventemitter2/lib/eventemitter2.js',
 			'libs/bower_components/async/lib/async.js',
 			'libs/bower_components/director/build/director.js',
 			'libs/bower_components/i18next/i18next.js',
+			'libs/bower_components/validator-js/validator.js',
 			//-----------------------------------------
 			'libs/vendor/stagejsv2/infrastructure.js',
 			'libs/vendor/stagejsv2/coop-ee2-async.js',
 			'libs/vendor/stagejsv2/utils.js',
 			'libs/vendor/stagejsv2/com-ajax-ws-rtc.js',
 			'libs/vendor/stagejsv2/i18n-i18next.js',
+			'libs/vendor/stagejsv2/validate-validator.js',
 			'libs/vendor/stagejsv2/navigation-director.js',
 			//-----------------------------------------
 			'libs/bower_components/bootstrap/dist/js/bootstrap.js',

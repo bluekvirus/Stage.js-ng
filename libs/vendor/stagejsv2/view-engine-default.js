@@ -1,5 +1,5 @@
 /**
- * Basic View Engine. (Using Mustache.js as templating engine)
+ * Basic View Engine. (Using Handlebars.js as templating engine)
  *
  * Plugins (to app)
  * ----------------
@@ -22,7 +22,7 @@
  * 		[init]: function(options, ready){...; ready();}
  * 		[$el]:
  * 		[data]:
- * 		[events]: '<e> <selector>': 'fn' or fn(e, exarg1, exarg2) {$(this), e.data.view}
+ * 		[events]: '<e>[ <selector>]': 'fn' or fn(e, exarg1, exarg2) use $(this) or e.data.view in fn.
  * 		[coop]: global events forwarding...
  * })
  * 2. view.render(data, [$el])
@@ -75,22 +75,24 @@
  *
  * Gotcha
  * ------
- * 1. If you use `app.coordinator.on` for co-op with other things in the application, make sure to clean the listener
- * up in the view's `teardown` event.
- * 2. there are no `on<event>` shortcut functions for listeners in a view. use `.on`/`.once` and `options.events` to 
+ * 1. there are no `on<event>` shortcut functions for listeners in a view. use `.on`/`.once` and `options.events` to 
  * register them instead.
+ * 2. e.data.view is only available to listeners registered with `selectors` in {events: {...}}, this is because ($this) no longer points to the delegated view object.
+ * 3. render `different` (by _name) component on the same $el will automatically teardown the previously attached view.
+ * 4. view.deps will be automatically populated in amd mode only by defining through ve.component([..deps..], {}).
  * 
  *
  * Hardcode
  * --------
- * 1. templates must be named `*.mst.html`
+ * 1. templates must be named `*.hbs.html`
  *
  *
  * @author Tim Lauv <bluekvirus@gmail.com>
  * @created 2015.04.27
  */
-(function(_, $, app, Mustache){
-	app.ve = {_name: 'Basic', _tplSuffix: '.mst.html', _TemplateEngine: Mustache};
+(function(_, $, app, Handlebars){
+	app.ve = {_name: 'Basic', _tplSuffix: '.hbs.html', _TemplateEngine: Handlebars};
+	app._cache.compiledtpls = {};
 
 	//--------------------------------View class definition---------------------------------
 	//.template, .$el, .data, init(options, cb) .render(data), .teardown(), .events, .once/on/off/trigger()
@@ -107,8 +109,10 @@
 		this.events = this._options.events || this.events;
 		this.template = this._options.template || this.template;
 
-		//give each instance a unique id
-		this._uid = _.uniqueId(app.ve._name.toLowerCase() + '_');
+		//give each instance a unique id & fixed class/component name
+		var id = _.uniqueId();
+		this._uid = 'view-' + id;
+		this._name = this._name || [app.ve._name, '_Anonymous_', id].join('');
 
 		var self = this;
 		//extension point: init() (so you can load remote resources)
@@ -128,7 +132,7 @@
 					self.trigger.apply(self, args);
 				}
 				else {
-					if(app.ve._rendered[self.getUID]){
+					if(app.ve._rendered[self.getUID()]){
 						app.coordinator.off(ge, self._postman[ge]);
 					}
 				}
@@ -165,15 +169,19 @@
 			if(!this.$el)
 				app.throw('You must have a valid DOM el for ' + this.getComponentName() + ' to render()...');
 
-			//always merge new data instead of replacing completely, use view.data = data to do that.
+			//always merge new data instead of replacing completely, use view.data = data for a complete reset.
 			if(data)
 				this.data = _.merge(this.data || {}, data);
-			var content = app.ve._TemplateEngine.render(tpl, this.data);
+			//check and fetch the compiled template cache.
+			var tplfn = app._cache.compiledtpls[this.getComponentName()] || app.ve._TemplateEngine.compile(tpl);
+			if(!app.notplcache) app._cache.compiledtpls[this.getComponentName()] = tplfn;
+			//combine data + tpl into html
+			var content = tplfn(this.data);
 
 			//teardown previous view if template is different.
 			var meta = this.$el.data();
 			if(!meta) app.throw('Invalid $el upon ' + this.getComponentName() + '.render(), check your el selector...');
-			if(meta.view && (meta.view.template !== this.template))
+			if(meta.view && (meta.view.getComponentName() !== this.getComponentName()))
 				meta.view.teardown();
 
 			//render 
@@ -186,7 +194,11 @@
 					var name = $el.attr('component');
 					var Comp = app.ve.get(name);
 					if(self.deps[Comp.prototype._name]) {
-						new Comp({el: el});
+						(new Comp({el: el})).once('render', function(e, v){
+							//remember the uid of this sub component instance. (for teardown())
+							//note that v === $(this).data('view');
+							self.deps[v.getComponentName()].push(v.getUID());
+						});
 					}
 				});
 			this.$el.data('view', this);
@@ -207,7 +219,7 @@
 			}
 
 			app.ve._rendered[this._uid] = this.$el;
-			this.trigger('render');
+			this.trigger('render', this);
 			return this;
 		},
 
@@ -218,10 +230,19 @@
 				this.trigger('teardown');
 				this.off();
 
-				//cleanup related registry. (global events forwarding & rendered instances)
+				//cleanup global events forwarding registry.
 				_.each(this._postman, function(fn, ge){
 					app.coordinator.off(ge, fn);
 				});
+				//cleanup sub component instances.
+				_.each(this.deps, function(subcompuids){
+					_.each(subcompuids, function(uid){
+						var tmp = app.ve._rendered[uid];
+						if(tmp) tmp = tmp.data('view');
+						if(tmp) tmp.teardown();
+					});
+				});
+				//remove self from instance registery.
 				delete app.ve._rendered[this._uid];
 			}
 		},
@@ -278,7 +299,7 @@
 
 		//utilities
 		getComponentName: function(){
-			return this._name || '_Anonymous_';
+			return this._name;
 		},
 
 		getUID: function(){
@@ -425,7 +446,7 @@
 								app.ve.component(compName, _.extend(js, {
 									template: tpl,
 									deps: _.reduce(Comps, function(deps, Comp){
-										deps[Comp.prototype._name] = true;
+										deps[Comp.prototype._name] = [];//instance uids
 										return deps;
 									}, {})
 								}))
@@ -438,4 +459,4 @@
 			}, cb);//as error cb
 		}
 
-})(_, jQuery, Application, Mustache);
+})(_, jQuery, Application, Handlebars);

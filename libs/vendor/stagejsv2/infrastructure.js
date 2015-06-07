@@ -13,6 +13,8 @@
  * APIs
  * -------
  * - .config
+ * 		| .home - landing route default
+ * 		| .notplcache - disabling compiled template caching
  * - ._load (->e app.load, requires firing app.loaded in hooks)
  * - ._init (->e app.initialize, requires firing app.initialized in hooks)
  * - ._ready (->e app.ready)
@@ -44,6 +46,12 @@
  * - .ve.get
  * - .ve.list
  * - .ve.inject
+ *
+ * plugin: validate
+ * - .validate.is*,
+ * - .validate.matches
+ * - .sanitize.to*
+ * - .sanitize.blacklist, whitelist, escape
  * 
  *
  * Properties
@@ -66,6 +74,10 @@
  * - .ve
  * - .ve._components (_name: Class)
  * - .ve._rendered (_uid: $el)
+ *
+ * plugin: validate
+ * - .validate
+ * - .sanitize
  * 
  * - [.state]
  *

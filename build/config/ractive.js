@@ -1,5 +1,5 @@
 /**
- * Extend from the basic configure, to support using Ractive.js
+ * Extend from the _base configure, to support using Ractive.js
  *
  * @author Tim Lauv
  * @created 2015.04.27

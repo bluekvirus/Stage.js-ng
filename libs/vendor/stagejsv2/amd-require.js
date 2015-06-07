@@ -1,3 +1,10 @@
+/**
+ * AMD (require.js) configure file, entrypoint after task:amd
+ *
+ * @author Tim Lauv
+ * @created 2015.06.01
+ */
+
 (function(app){
 
 	if(!app.isAMDEnabled()) return;

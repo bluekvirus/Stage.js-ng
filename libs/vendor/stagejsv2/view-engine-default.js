@@ -4,13 +4,14 @@
  * Plugins (to app)
  * ----------------
  * app.ve
- * app.ve._rendered
- * app.ve._components
- * app.ve.view
- * app.ve.component (name, configure) or ([deps], configure)
- * app.ve.get
- * app.ve.list
- * app.ve.inject
+ * app.ve._rendered -- {uid: $el, uid2: $el2, ...}
+ * app.ve._components -- {name: Class, name2: Class2, ...}
+ * app.ve.view -- (configure) => instance
+ * app.ve.component -- (name, configure) or ([deps], configure)
+ * 						  	| manual View.deps;    | auto View.deps;
+ * app.ve.get -- (name or path) => Class
+ * app.ve.list => [names]
+ * app.ve.inject -- (path or [paths], cb(err, Class or [Classes]))
  * $(el).data('view')
  *
  *
@@ -18,7 +19,7 @@
  * -----------
  * 1. new View({
  * 		template: name or <...>
- * 		[deps]: sub-components used in template < component="..." >
+ * 		[deps]: sub-components used in template < component="..." > (path or name)
  * 		[init]: function(options, ready){...; ready();}
  * 		[$el]:
  * 		[data]:
@@ -39,7 +40,7 @@
  * 1. _name
  * 2. _uid
  * 3. _postman
- * 4. deps - sub-component names map e.g {Comp: true, Comp2: true}
+ * 4. deps - sub-component [names/paths], will turn into {Comp: [], Comp2: []} after resolve.
  * 
  *
  * View Lifecycle and Events
@@ -63,14 +64,15 @@
  * ----------
  * 1. only views with `$el` can be rendered on screen, otherwise an exception with be raised;
  * 2. only `template` name is required when defining a View, `data` and `$el` can be inserted later using `.render()`;
- * 3. only views with `$el` can register events;
+ * 3. views with or without `$el` can all register event listeners, but they will only be activated upon render;
  * 4. rendering same view again and again will not re-register the listeners;
- * 5. rendering a new view on a `$el` will `.teardown()` the previous view if template names are different;
+ * 5. rendering a new view on a `$el` will `.teardown()` the previous view if component names are different;
  * 6. `.teardown()` will not `$.remove()` a view's `$el`, but `$.empty()` it and remove all the event listeners;
  *
  * Ghost View will NOT happen in this implementation since jQuery removes data and event handlers from child
  * elements during `$.empty()`. If you render parent `$el` with a new view, child views will be removed properly
- * given that we bind everything on the `$el` through jQuery.
+ * given that we bind everything on the `$el` through jQuery, and take extra care to teardown the sub components
+ * introduced by view.deps.
  *
  *
  * Gotcha
@@ -78,8 +80,8 @@
  * 1. there are no `on<event>` shortcut functions for listeners in a view. use `.on`/`.once` and `options.events` to 
  * register them instead.
  * 2. e.data.view is only available to listeners registered with `selectors` in {events: {...}}, this is because ($this) no longer points to the delegated view object.
- * 3. render `different` (by _name) component on the same $el will automatically teardown the previously attached view.
- * 4. view.deps will be automatically populated in amd mode only by defining through ve.component([..deps..], {}).
+ * 3. view.deps will be automatically populated in amd mode only by defining through ve.component([..deps..], {}).
+ * 4. [] _.isArray() and also _.isObject()
  * 
  *
  * Hardcode
@@ -97,7 +99,7 @@
 	//--------------------------------View class definition---------------------------------
 	//.template, .$el, .data, init(options, cb) .render(data), .teardown(), .events, .once/on/off/trigger()
 	
-	//constructor (logic-free)
+	//constructor (logic-free, define INSTANCE variables)
 	var View = function(options){
 		this._options = options || {};
 		
@@ -109,18 +111,12 @@
 		this.events = this._options.events || this.events;
 		this.template = this._options.template || this.template;
 
-		//give each instance a unique id & fixed class/component name
-		var id = _.uniqueId();
-		this._uid = 'view-' + id;
-		this._name = this._name || [app.ve._name, '_Anonymous_', id].join('');
-
+		//internal
 		var self = this;
-		//extension point: init() (so you can load remote resources)
-		//add a ready() callback to init
-		this.init(this._options, function(){
-			//render it right away upon creation if we know $el
-			if(self.$el) self.render();
-		});
+		var id = _.uniqueId();
+		this._uid = 'view-' + id; //give each instance a unique id
+		this._name = this._name || [app.ve._name, '_Anonymous_', id].join(''); //fixed class/component name
+		this._listenerBuffs = {once:[], on:[]}; //listener cache before given $el
 		//extension point: coop (so you can have global events forwarded to this view)
 		this._postman = {};
 		_.each(this.coop, function(ge){
@@ -139,9 +135,16 @@
 			};
 			app.coordinator.on(ge, self._postman[ge]);
 		}, this);
+
+		//extension point: init() (so you can load remote resources)
+		//add a ready() callback to init
+		this.init(this._options, function(){
+			//render it right away upon creation if we know $el
+			if(self.$el) self.render();
+		});
 		
 	};
-	//member methods
+	//member methods only (no GLOBALLY shared variables)
 	_.extend(View.prototype, {
 		init: function(options, ready){
 			ready();
@@ -188,19 +191,26 @@
 			this.$el.html(content);
 			//render sub components
 			var self = this;
-			if(this.deps)
+			if(this.deps){
+				//non-amd guard
+				if(_.isArray(this.deps))
+					this.deps = _.reduce(this.deps, function(resolved, np){
+						resolved[app.tplNameToCompName(np)] = [];
+						return resolved;
+					}, {});
 				this.$el.find('[component]').each(function(i, el){
 					var $el = $(this);
 					var name = $el.attr('component');
 					var Comp = app.ve.get(name);
 					if(self.deps[Comp.prototype._name]) {
-						(new Comp({el: el})).once('render', function(e, v){
+						(new Comp()).once('render', function(e){
 							//remember the uid of this sub component instance. (for teardown())
-							//note that v === $(this).data('view');
+							var v = $(this).data('view');
 							self.deps[v.getComponentName()].push(v.getUID());
-						});
+						}).render($el);
 					}
 				});
+			}
 			this.$el.data('view', this);
 			//re-render but not registering the listeners again.
 			if(!this.$el.data('_events_')) {
@@ -214,21 +224,25 @@
 					else
 						this.$el.on(name, {view: this.$el.data('view')}, fn);
 				}, this);
-				
+
+				//add cached listeners from before (without a $el)
+				_.each(this._listenerBuffs, function(list, type){
+					_.each(list, function(args){
+						this[type].apply(this, args);
+					}, this);
+				}, this);
+				delete this._listenerBuffs;//cleanup
+
 				this.$el.data('_events_', true);
 			}
 
 			app.ve._rendered[this._uid] = this.$el;
-			this.trigger('render', this);
+			this.trigger('render');
 			return this;
 		},
 
 		teardown: function(){
 			if(this.$el){
-				this.$el.removeData('_events_', 'view');
-				this.$el.empty();
-				this.trigger('teardown');
-				this.off();
 
 				//cleanup global events forwarding registry.
 				_.each(this._postman, function(fn, ge){
@@ -242,6 +256,12 @@
 						if(tmp) tmp.teardown();
 					});
 				});
+
+				//cleanup self
+				this.$el.removeData('_events_', 'view');
+				this.$el.empty();
+				this.trigger('teardown');
+				this.off();
 				//remove self from instance registery.
 				delete app.ve._rendered[this._uid];
 			}
@@ -249,11 +269,16 @@
 
 		//dynamic instance events support .once, .trigger
 		//use options.events for easy .on listener registration.
+		//Note: before rendering with a valid $el, the listeners won't work!
+		//BUT, you can register them before giving the view a valid $el.
 		once: function(){
 			if(this.$el) {
 				this.$el.one.apply(this.$el, arguments);
 				this.$el.data('_events_', true);
 			}
+			else 
+				this._listenerBuffs.once.push(arguments);
+			return this;
 		},
 
 		on: function(){
@@ -261,12 +286,16 @@
 				this.$el.on.apply(this.$el, arguments);
 				this.$el.data('_events_', true);
 			}
+			else
+				this._listenerBuffs.on.push(arguments);
+			return this;
 		},
 
 		off: function(){
 			if(this.$el) {
 				this.$el.off.apply(this.$el, arguments);
 			}
+			return this;
 		},
 
 		//allows both (e, [ extraparams array/object]) and (e, extraparam1, extraparam2, ...)
@@ -281,6 +310,7 @@
 				//note that we use triggerHandler instead of trigger to avoid custom event bubbling
 				this.$el.triggerHandler.apply(this.$el, args);
 			}
+			return this;
 		},
 
 		//allows both (e, [ extraparams array/object]) and (e, extraparam1, extraparam2, ...)
@@ -295,6 +325,7 @@
 				//allow event bubbling
 				this.$el.trigger.apply(this.$el, args);
 			}
+			return this;
 		},
 
 		//utilities
@@ -371,27 +402,39 @@
 	//defines a view blueprint (support: both static and amd development)
 	app.ve.component = function(name, configure){
 
-		//amd mode, [deps] + configure (register upon inject)
-		if(_.isArray(name) || !configure){
-			if(app.isAMDEnabled()){
-				if(_.isArray(name)){
-					return define(_.extend(configure, {
-						deps: name //delay injection of sub components till app.ve.inject... (tech constrain: amd.define())
-					}));
-				}else {
-					return define.apply(define, arguments);
-				}
-			}
-			app.throw('Non-amd mode or Malformed view definition...');
+		//app.debug('app.ve.component call:', arguments);
+
+		if(!configure) {
+			configure = name;
+			name = null;
+		}
+		if(!configure) app.throw('Malformed Component definition...');
+
+		if(_.isArray(name)) {
+			configure.deps = name;
+			name = null;
 		}
 
-		//static mode, name + configure (performance: using _components directly)
+		//amd mode, [deps] + configure (register upon inject)
+		if(!name && app.isAMD()){
+			return define(configure);
+		}
+
+		//both in static & amd mode, name + configure (performance: using _components directly)
+		name = name || configure.suggestedName;
+		if(!name) {
+			app.throw('You must give a suggestedName when define a Component...');
+		}
+
 		if(app.ve._components[name]) {
 			//override 
 			app.ve._components[name] = app.ve._components[name].extend(configure);
 		} else
 			//register
 			app.ve._components[name] = View.extend(_.extend({_name: name}, configure));
+
+		//app.debug('app.ve._components:', app.ve._components);
+
 		return app.ve._components[name];
 
 	};
@@ -409,7 +452,7 @@
 	};
 		//internal worker for ve.inject (single target, cb(err, result))
 		function _inject (options, cb){
-			if(!app.isAMDEnabled()) app.throw('AMD is not enabled, use task:amd before ve.inject()');
+			if(!app.isAMD()) app.throw('AMD is not enabled, use task:amd before ve.inject()');
 			if(_.isString(options))
 				options = {path: options};
 			if(_.isFunction(options)){
@@ -427,7 +470,7 @@
 				options.path = options.path.replace(/:static$/, '');
 			}
 			var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
-			if(!app.param('debug') && app.ve.get(compName)) return;//components cache hit
+			if(!app.param('debug') && app.ve.get(compName)) return cb(null, app.ve.get(compName));//components cache hit
 
 			var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
 			jsTarget = tplTarget.replace(app.ve._tplSuffix, '');

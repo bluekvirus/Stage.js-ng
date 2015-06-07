@@ -10,7 +10,7 @@
 	app.config({
 		_cache: {},
 
-		isAMDEnabled: function(){
+		isAMD: function(){
 			return typeof define === "function" && define.amd;
 		},
 

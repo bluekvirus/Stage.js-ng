@@ -21,7 +21,7 @@ app.coordinator.on('app.navigate', function(ctx, item, rest){
 var start = function(){
 	$(function(){app.start();});
 };
-if(app.isAMDEnabled())
+if(app.isAMD())
 	define(function(){
 		app.ve.inject('main', start);
 	});

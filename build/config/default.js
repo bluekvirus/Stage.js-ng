@@ -8,6 +8,11 @@ var config = require('./_base.js');
 
 config.output = 'public/default';
 
+config.javascript.app = [
+	'src/vanilla/**/*.js',
+	'src/entrypoint.js'
+];
+
 config.javascript.libs.push(
 	//-----------------------specific view engine------------------------
 	'libs/bower_components/handlebars/handlebars.js',

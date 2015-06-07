@@ -7,7 +7,7 @@
 
 (function(app){
 
-	if(!app.isAMDEnabled()) return;
+	if(!app.isAMD()) return;
 
 	app.config({
 		amd: {

@@ -27,9 +27,11 @@
  * 
  * Note
  * ----
- * 1. Javascripts will always be **linted** and css will always be **autoprefixed** and **cleaned**.
+ * 1. Javascripts will NOT be **linted** but css will always be **autoprefixed** and **cleaned**.
  * 2. use `gulp --config [name] [task]` to load a different configure per task run.
  * 3. Normal build sequence `gulp -C <config>` --> [`gulp -C <config> amd`] --> `gulp -C <config> compress`
+ * 4. task:compress will not follow symbolic links.
+ * 5. Gulp is using node-glob internally, so all the options for gulp.src are in there.
  * 
  * 
  * @author Tim Lauv
@@ -291,7 +293,7 @@ gulp.task('compress', 'Minify and Gzip the js/html/css files', function compress
 		css: filter('**/*.css'),
 		html: filter('**/*.html')
 	};
-	return gulp.src(['**/*.js', '**/*.css', '**/*.html'], {cwd: path.join(configure.root, configure.output)})
+	return gulp.src(['**/*.js', '**/*.css', '**/*.html'], {cwd: path.join(configure.root, configure.output), follow: false})
 		.pipe(filters.js)
 		.pipe(uglify(configure.plugins.uglify))
 		.pipe(filters.js.restore())

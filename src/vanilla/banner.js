@@ -1,4 +1,5 @@
 app.ve.component({
+	suggestedName: 'Banner',
 
 	coop: ['app:change-title'],
 	events: {

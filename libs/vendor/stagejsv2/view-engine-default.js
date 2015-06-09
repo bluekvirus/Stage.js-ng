@@ -44,7 +44,7 @@
  * 5. vm - the .data turned view-model in a `bindings` enabled view, with change event forwarded to view as 'vm:change'
  * 		|.set(path, val)
  * 		|.get(path)
- * 		|.toJSON()
+ * 		|.toJSON() - a JS object instead of JSON string.
  *
  * Note that 'vm:change' contains e.field for object or e.action/index/items/field for array.
  * 
@@ -154,7 +154,7 @@
 		if(this.$el) this.render();
 		
 	};
-	//member methods only (no GLOBALLY shared variables)
+	//member methods only (no GLOBALLY shared state variables please!)
 	_.extend(View.prototype, {
 		init: undefined,
 
@@ -220,9 +220,10 @@
 					var name = $el.attr('component');
 					var Comp = app.ve.get(name);
 					if(self.deps[Comp.prototype._name]) {
-						(new Comp()).once('render', function(e){
+						var subcomp = new Comp();
+						subcomp.once('render', {view: subcomp}, function(e){
 							//remember the uid of this sub component instance. (for teardown())
-							var v = $(this).data('view');
+							var v = e.data.view;
 							self.deps[v.getComponentName()].push(v.getUID());
 						}).render($el);
 					}
@@ -259,7 +260,13 @@
 				//cleanup previousely bound vm every time. (so try NOT to rerender with bindings enabled)
 				if(this.vm) this.vm.unbind();
 				//create and bind new vm
-				this.vm = createVM(this.data);
+				this.vm = _.extend((this.createVM && this.createVM(this.data)) || this._createVM(this.data),{
+					//provide a way to sync .vm into .data, like taking a snapshot of state.
+					snapshot: function(){
+						self.data = this.toJSON();//note that vm.toJSON() will return a JS object.
+						return self.data;
+					}
+				});
 				bindVVM(this.$el, this.vm);
 				//forward the change event
 				this.vm.bind('change', function(e){
@@ -304,6 +311,9 @@
 		//Note: before rendering with a valid $el, the listeners won't work!
 		//BUT, you can register them before giving the view a valid $el. (you will NOT have e.data.view this way!!)
 		once: function(){
+			if(arguments.length < 3 || _.isString(arguments[_.size(arguments)-2]))
+				app.debug('Warning: ' + this.getComponentName() +'.once(\'' + arguments[0] + '\') might not have access to e.data.view...');
+
 			if(this.$el) {
 				this.$el.one.apply(this.$el, arguments);
 				this.$el.data('_events_', true);
@@ -314,6 +324,9 @@
 		},
 
 		on: function(){
+			if(arguments.length < 3 || _.isString(arguments[_.size(arguments)-2]))
+				app.debug('Warning: ' + this.getComponentName() +'.on(\'' + arguments[0] + '\') might not have access to e.data.view...');
+
 			if(this.$el) {
 				this.$el.on.apply(this.$el, arguments);
 				this.$el.data('_events_', true);
@@ -373,7 +386,9 @@
 		isInDOM: function(){
 			if(!this.$el) return false;
 			return $.contains(document.documentElement, this.$el[0]);
-		}
+		},
+
+		_createVM: createVM,
 	});
 	//static methods
 	_.extend(View, {
@@ -395,6 +410,26 @@
 			return B;
 		}
 	});
+
+	//------------------------jQuery plugin----------------------------
+	//shortcut of getting view instance per $el. 
+	//Note: use `$el.view(true)` to get all views returned as non-.
+	$.fn.view = function(extract){
+		var views = this.map(function(){
+			return $(this).data('view');
+		});
+
+		if(!extract)
+			return views; //use .get() afterward
+		else {
+			switch(views.length){
+				case 1:
+				return views.get(0);
+				default:
+				return views.get();
+			}
+		}
+	};
 
 	//-----------------hooks into app infrastructure-------------------
 	//convert templates into components (support: non-amd development)

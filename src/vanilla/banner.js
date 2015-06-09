@@ -7,6 +7,17 @@ app.ve.component({
 			self.data = data;
 			ready();
 		});
+
+		//regression: on/once {view: self} auto inject.
+		// this.on('render', function(e){
+		// 	app.debug('2', (e.data && e.data.view)?true: false);
+		// }).once('click', 'li', function(e){
+		// 	app.debug('3-1', (e.data && e.data.view)?true: false);
+		// }).on('render', {mock: true}, function(e){
+		// 	app.debug('3-2', (e.data && e.data.view)?true: false);
+		// }).once('click', 'li', {mock: false}, function(e){
+		// 	app.debug('4', (e.data && e.data.view)?true: false);
+		// });
 	},
 
 	bindings: true, //enable MVVM

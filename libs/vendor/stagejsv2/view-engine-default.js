@@ -12,7 +12,7 @@
  * app.ve.get -- (name or path) => Class
  * app.ve.list => [names]
  * app.ve.inject -- (path or [paths], cb(err, Class or [Classes]))
- * $(el).data('view')
+ * $(el).view(true) -- shortcut for getting the view in $el (use $el.data('view') internally)
  *
  *
  * Use of View
@@ -23,7 +23,7 @@
  * 		[init]: function(options, ready){...; ready();}
  * 		[$el]:
  * 		[data]:
- * 		[events]: '<e>[ <selector>]': 'fn' or fn(e, exarg1, exarg2) use $(this) or e.data.view in fn.
+ * 		[events]: '<e>[ <selector>]': 'fn' or fn(e, exarg1, exarg2), e.data.view is self.
  * 		[coop]: global events forwarding...
  * 		[bindings]: whether to turn on MVVM after rendering or not
  * 					(available bindings in template: http://docs.telerik.com/kendo-ui/framework/mvvm/bindings/)
@@ -32,7 +32,7 @@
  * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
- * 6. view.getComponentName()/getUID()/isInDOM()
+ * 6. view.getComponentName()/getUID()/isInDOM()/[createVM()]
  *
  * 
  * View Properties (hidden/non-config)
@@ -45,8 +45,10 @@
  * 		|.set(path, val)
  * 		|.get(path)
  * 		|.toJSON() - a JS object instead of JSON string.
+ * 		|.snapshot() - sync .vm state to .data
  *
- * Note that 'vm:change' contains e.field for object or e.action/index/items/field for array.
+ * Note that `vm:change` contains e.field for object or e.action/index/items/field for array.
+ * Note that before `render` .vm will NOT be available. (you can NOT use this.vm.bind() in init()!)
  * 
  *
  * View Lifecycle and Events
@@ -85,7 +87,7 @@
  * ------
  * 1. there are no `on<event>` shortcut functions for listeners in a view. use `.on`/`.once` and `options.events` to 
  * register them instead.
- * 2. e.data.view is automatically available to listeners registered with the `.events` block. It is NOT true for manual registeration through .one/.on;
+ * 2. e.data.view is automatically available to listeners registered with the `.events` block and on/once functions;
  * 3. view.deps will be automatically populated in amd mode only by defining through ve.component([..deps..], {}).
  * 4. [] _.isArray() and also _.isObject().
  * 5. use `.vm.set()` to update `bindings` enabled view instead of re-rendering it. Note that this will NOT sync `.vm` with `.data`;
@@ -221,7 +223,7 @@
 					var Comp = app.ve.get(name);
 					if(self.deps[Comp.prototype._name]) {
 						var subcomp = new Comp();
-						subcomp.once('render', {view: subcomp}, function(e){
+						subcomp.once('render', function(e){
 							//remember the uid of this sub component instance. (for teardown())
 							var v = e.data.view;
 							self.deps[v.getComponentName()].push(v.getUID());
@@ -238,9 +240,9 @@
 					var tmp = _.compact(namenselector.split(' '));
 					name = tmp.shift();
 					if(_.size(tmp))
-						this.$el.on(name, tmp.join(' '), {view: this.$el.data('view')}, fn);
+						this.$el.on(name, tmp.join(' '), fn);
 					else
-						this.$el.on(name, {view: this.$el.data('view')}, fn);
+						this.$el.on(name, fn);
 				}, this);
 
 				//add cached listeners from before (without a $el)
@@ -306,33 +308,28 @@
 			}
 		},
 
-		//manual support for instance events, .once, .on
-		//use options.events for easy .on listener registration. (you will have e.data.view available!)
-		//Note: before rendering with a valid $el, the listeners won't work!
-		//BUT, you can register them before giving the view a valid $el. (you will NOT have e.data.view this way!!)
+		//manual registration support for instance events, .once, .on
 		once: function(){
-			if(arguments.length < 3 || _.isString(arguments[_.size(arguments)-2]))
-				app.debug('Warning: ' + this.getComponentName() +'.once(\'' + arguments[0] + '\') might not have access to e.data.view...');
+			var args = this._guardEveListenerArgs('once', arguments);
 
 			if(this.$el) {
-				this.$el.one.apply(this.$el, arguments);
+				this.$el.one.apply(this.$el, args);
 				this.$el.data('_events_', true);
 			}
 			else 
-				this._listenerBuffs.once.push(arguments);
+				this._listenerBuffs.once.push(args);
 			return this;
 		},
 
 		on: function(){
-			if(arguments.length < 3 || _.isString(arguments[_.size(arguments)-2]))
-				app.debug('Warning: ' + this.getComponentName() +'.on(\'' + arguments[0] + '\') might not have access to e.data.view...');
+			var args = this._guardEveListenerArgs('on', arguments);
 
 			if(this.$el) {
-				this.$el.on.apply(this.$el, arguments);
+				this.$el.on.apply(this.$el, args);
 				this.$el.data('_events_', true);
 			}
 			else
-				this._listenerBuffs.on.push(arguments);
+				this._listenerBuffs.on.push(args);
 			return this;
 		},
 
@@ -388,6 +385,35 @@
 			return $.contains(document.documentElement, this.$el[0]);
 		},
 
+		//fix and inject {view: self} into all event listener args as e.data.view.
+		_guardEveListenerArgs: function(type, args){
+			args = _.toArray(args);
+			if(!args || args.length < 2) app.throw('Malformed '+ type +' event listener registration...');
+
+			var self = this;
+			switch(args.length){
+				case 2:
+					args.splice(1, 0, {view: self});
+				break;
+				case 3:
+					var tmp = args.splice(1, 1);
+					if(_.isString(tmp)){
+						args.splice(1, 0, {view: self});
+						args.splice(1, 0, tmp);
+					}else 
+						args.splice(1, 0, _.extend(tmp, {view: self}));
+				break;
+				case 4:
+					args.splice(2, 1, _.extend(args[2], {view: self}));
+				break;
+				default:
+				break;
+			}
+
+			return args;
+		},
+
+		//in case you want to create customized .createVM(), with the help of global default createVM()
 		_createVM: createVM,
 	});
 	//static methods

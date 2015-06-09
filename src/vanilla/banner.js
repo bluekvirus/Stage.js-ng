@@ -9,6 +9,7 @@ app.ve.component({
 		});
 	},
 
+	bindings: true, //enable MVVM
 	coop: ['app:change-title'],
 	events: {
 		'render': function(){
@@ -18,6 +19,9 @@ app.ve.component({
 			var self = e.data.view;
 			self.render({title: title, version: [major, minor, patch].join('.')});
 			app.debug('ack', arguments);
+		},
+		'vm:change': function(e, signal){
+			app.debug('detected', e.type, signal.field || signal.action);
 		}
 	}
 

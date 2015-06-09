@@ -25,22 +25,28 @@
  * 		[data]:
  * 		[events]: '<e>[ <selector>]': 'fn' or fn(e, exarg1, exarg2) use $(this) or e.data.view in fn.
  * 		[coop]: global events forwarding...
+ * 		[bindings]: whether to turn on MVVM after rendering or not
+ * 					(available bindings in template: http://docs.telerik.com/kendo-ui/framework/mvvm/bindings/)
  * })
  * 2. view.render(data, [$el])
  * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
  * 6. view.getComponentName()/getUID()/isInDOM()
- * 7. view.bind() TBI (two-way with binders in tpl)
- * 8. view.vm TBI (available after view.bind())
  *
  * 
- * View Properties
- * ---------------
+ * View Properties (hidden/non-config)
+ * ----------------------------------
  * 1. _name
  * 2. _uid
  * 3. _postman
  * 4. deps - sub-component [names/paths], will turn into {Comp: [], Comp2: []} after resolve.
+ * 5. vm - the .data turned view-model in a `bindings` enabled view, with change event forwarded to view as 'vm:change'
+ * 		|.set(path, val)
+ * 		|.get(path)
+ * 		|.toJSON()
+ *
+ * Note that 'vm:change' contains e.field for object or e.action/index/items/field for array.
  * 
  *
  * View Lifecycle and Events
@@ -79,9 +85,10 @@
  * ------
  * 1. there are no `on<event>` shortcut functions for listeners in a view. use `.on`/`.once` and `options.events` to 
  * register them instead.
- * 2. e.data.view is only available to listeners registered with `selectors` in {events: {...}}, this is because ($this) no longer points to the delegated view object.
+ * 2. e.data.view is automatically available to listeners registered with the `.events` block. It is NOT true for manual registeration through .one/.on;
  * 3. view.deps will be automatically populated in amd mode only by defining through ve.component([..deps..], {}).
- * 4. [] _.isArray() and also _.isObject()
+ * 4. [] _.isArray() and also _.isObject().
+ * 5. use `.vm.set()` to update `bindings` enabled view instead of re-rendering it. Note that this will NOT sync `.vm` with `.data`;
  * 
  *
  * Hardcode
@@ -92,7 +99,7 @@
  * @author Tim Lauv <bluekvirus@gmail.com>
  * @created 2015.04.27
  */
-(function(_, $, app, Handlebars){
+(function(_, $, app, Handlebars, createVM, bindVVM){
 	app.ve = {_name: 'Basic', _tplSuffix: '.hbs.html', _TemplateEngine: Handlebars};
 	app._cache.compiledtpls = {};
 
@@ -110,6 +117,7 @@
 		this.init = this._options.init || this._options.initialize || this.init;
 		this.events = this._options.events || this.events;
 		this.template = this._options.template || this.template;
+		this.bindings = this._options.bindings || this.bindings; //MVVM support upon render
 
 		//internal
 		var self = this;
@@ -184,6 +192,7 @@
 			//always merge new data instead of replacing completely, use view.data = data for a complete reset.
 			if(data)
 				this.data = _.merge(this.data || {}, data);
+
 			//check and fetch the compiled template cache.
 			var tplfn = app._cache.compiledtpls[this.getComponentName()] || app.ve._TemplateEngine.compile(tpl);
 			if(!app.notplcache) app._cache.compiledtpls[this.getComponentName()] = tplfn;
@@ -242,6 +251,20 @@
 				delete this._listenerBuffs;//cleanup
 
 				this.$el.data('_events_', true);
+
+			}
+
+			//bind the viewmodel if required. (after template rendering)
+			if(this.bindings){
+				//cleanup previousely bound vm every time. (so try NOT to rerender with bindings enabled)
+				if(this.vm) this.vm.unbind();
+				//create and bind new vm
+				this.vm = createVM(this.data);
+				bindVVM(this.$el, this.vm);
+				//forward the change event
+				this.vm.bind('change', function(e){
+					self.trigger('vm:change', e);
+				});
 			}
 
 			app.ve._rendered[this._uid] = this.$el;
@@ -266,6 +289,7 @@
 				});
 
 				//cleanup self
+				if(this.vm) this.vm.unbind();
 				this.$el.removeData('_events_', 'view');
 				this.$el.empty();
 				this.trigger('teardown');
@@ -275,10 +299,10 @@
 			}
 		},
 
-		//dynamic instance events support .once, .trigger
-		//use options.events for easy .on listener registration.
+		//manual support for instance events, .once, .on
+		//use options.events for easy .on listener registration. (you will have e.data.view available!)
 		//Note: before rendering with a valid $el, the listeners won't work!
-		//BUT, you can register them before giving the view a valid $el.
+		//BUT, you can register them before giving the view a valid $el. (you will NOT have e.data.view this way!!)
 		once: function(){
 			if(this.$el) {
 				this.$el.one.apply(this.$el, arguments);
@@ -299,6 +323,7 @@
 			return this;
 		},
 
+		//event listener clean up
 		off: function(){
 			if(this.$el) {
 				this.$el.off.apply(this.$el, arguments);
@@ -510,4 +535,4 @@
 			}, cb);//as error cb
 		}
 
-})(_, jQuery, Application, Handlebars);
+})(_, jQuery, Application, Handlebars, kendo.observable, kendo.bind);

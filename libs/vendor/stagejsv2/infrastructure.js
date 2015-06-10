@@ -15,9 +15,9 @@
  * - .config
  * 		| .home - landing route default
  * 		| .notplcache - disabling compiled template caching
- * - ._load (->e app.load, requires firing app.loaded in hooks)
- * - ._init (->e app.initialize, requires firing app.initialized in hooks)
- * - ._ready (->e app.ready)
+ * - ._load (->e app:load, requires firing app:loaded in hooks)
+ * - ._init (->e app:initialize, requires firing app:initialized in hooks)
+ * - ._ready (->e app:ready)
  * - .start () - entrypoint
  *
  * plugin: com
@@ -78,23 +78,21 @@
  * plugin: validate
  * - .validate
  * - .sanitize
- * 
- * - [.state]
  *
  * 
  * Bootup
  * -------
  * ###1. Setup (entrypoint.js)
  * ----------->----------->--------------->--------->
- * 	 					   *app.navigate, 
- * [app.load], [app.init], 			      [app.ready]			
+ * 	 					   *app:navigate, 
+ * [app:load], [app:init], 			      [app:ready]			
  *  
  * ####Sample Code:
  * ```
  * app.config({...})
  * $(function(){app.start();});
  *      
- * app.coordinator.on('app.navigate', function(ctx, item, rest){
+ * app.coordinator.on('app:navigate', function(ctx, item, rest){
  * 	app.debug('@context', ctx, '@item', item, '@rest', rest);
  * });
  * ```
@@ -105,21 +103,21 @@
  * ```
  * //Opt A. through events (recommended)
  * //load
- * app.coordinator.on('app.load', function(){
+ * app.coordinator.on('app:load', function(){
  * 	...
- * 	app.coordinator.trigger('app.loaded');
+ * 	app.coordinator.trigger('app:loaded');
  * });
  * 
  * //initialize
- * app.coordinator.on('app.initialize', function($ct){
+ * app.coordinator.on('app:initialize', function($ct){
  * 	$ct.html(app.templates['main.tpl.html']);
- *  app.coordinator.trigger('app.initialized');
+ *  app.coordinator.trigger('app:initialized');
  * });
  *
  * //Opt B. override _.load, _.init
  * ```
- * Gotcha: If you listen to `app.load` or/and `app.initialize` make sure you emit/trigger/fire 
- * the `app.loaded` or/and `app.initialize` at the end of your listener. This is required for 
+ * Gotcha: If you listen to `app:load` or/and `app:initialize` make sure you emit/trigger/fire 
+ * the `app:loaded` or/and `app:initialize` at the end of your listener. This is required for 
  * EVERY listener to these 2 events.
  * 
  * 
@@ -127,7 +125,7 @@
  * ----------
  * If you haven't changed the navigation implementation, here is the default behavior.
  * Each time the hash portion (/#...) changes a default navigation event will be triggered.
- * Listen to the `app.navigation` event will provide you with 3 unique params for determining
+ * Listen to the `app:navigation` event will provide you with 3 unique params for determining
  * content on screen:
  * - context -- e.g Home, Products, About or Dashboard, User, Configurations...
  * - item -- e.g anything that's level 2 in a context
@@ -137,7 +135,7 @@
  * the rest of the hash uri.
  *
  * The default navigation mechanism does NOT include actual view handling and layout manipulation.
- * Implement yours in the `app.navigation` listener.
+ * Implement yours in the `app:navigation` listener.
  *
  * 
  * View Manager/Engine (plugin)
@@ -217,7 +215,7 @@
 			}).fail(function(){
 				app.templates = {};
 			}).always(function(){
-				app.coordinator.trigger('app.load'); //--> [extend]
+				app.coordinator.trigger('app:load'); //--> [extend]
 			});
 
 		},
@@ -227,35 +225,35 @@
 			//default *init* implementation:
 			//a. forward window resize, scroll events
 			$window.resize(function(){
-				app.coordinator.trigger('app.resize');
+				app.coordinator.trigger('app:resize');
 			});
 			$window.scroll(function(){
-				app.coordinator.trigger('app.scroll');
+				app.coordinator.trigger('app:scroll');
 			});
 
-			this.coordinator.trigger('app.initialize'); //--> [extend]
+			this.coordinator.trigger('app:initialize'); //--> [extend]
 		},
 
 		//3. kickoff navigation
 		_ready: function(){
-			this.coordinator.trigger('app.ready'); //--> [extend]
+			this.coordinator.trigger('app:ready'); //--> [extend]
 		},
 
 		//entry point (support pause-by-each-step mode)
 		//Time this with page/DOM ready, do NOT call it directly.
 		start: function(){
-			if(app.coordinator.listeners('app.load').length === 0)
-				app.coordinator.on('app.load', function(){
-					app.coordinator.trigger('app.loaded');
+			if(app.coordinator.listeners('app:load').length === 0)
+				app.coordinator.on('app:load', function(){
+					app.coordinator.trigger('app:loaded');
 				});
-			if(app.coordinator.listeners('app.initialize').length === 0)
-				app.coordinator.on('app.initialize', function(){
-					app.coordinator.trigger('app.initialized');
+			if(app.coordinator.listeners('app:initialize').length === 0)
+				app.coordinator.on('app:initialize', function(){
+					app.coordinator.trigger('app:initialized');
 				});
-			app.coordinator.on('app.loaded', _.after(app.coordinator.listeners('app.load').length, function(){
+			app.coordinator.on('app:loaded', _.after(app.coordinator.listeners('app:load').length, function(){
 				app._init();
 			}));
-			app.coordinator.on('app.initialized', _.after(app.coordinator.listeners('app.initialize').length, function(){
+			app.coordinator.on('app:initialized', _.after(app.coordinator.listeners('app:initialize').length, function(){
 				app._ready();
 			}));
 			app._load();

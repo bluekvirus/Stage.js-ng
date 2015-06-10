@@ -32,7 +32,7 @@
  * 3. view.on/($)trigger/once/off()
  * 4. view.teardown()
  * 5. View.extend({...})
- * 6. view.getComponentName()/getUID()/isInDOM()/[createVM()]
+ * 6. view.getComponentName()/getUID()/isRendered(inDomFlag)/[createVM()]
  *
  * 
  * View Properties (hidden/non-config)
@@ -89,8 +89,8 @@
  * register them instead.
  * 2. e.data.view is automatically available to listeners registered with the `.events` block and on/once functions;
  * 3. view.deps will be automatically populated in amd mode only by defining through ve.component([..deps..], {}).
- * 4. [] _.isArray() and also _.isObject().
- * 5. use `.vm.set()` to update `bindings` enabled view instead of re-rendering it. Note that this will NOT sync `.vm` with `.data`;
+ * 4. use `.vm.set()` to update `bindings` enabled view instead of re-rendering it. Note that this will NOT sync `.vm` with `.data`;
+ * 5. when in doubt, read through .render() and .isRendered() again. Try not to re-use a view instance without tear it down first;
  * 
  *
  * Hardcode
@@ -126,21 +126,23 @@
 		var id = _.uniqueId();
 		this._uid = 'view-' + id; //give each instance a unique id
 		this._name = this._name || [app.ve._name, '_Anonymous_', id].join(''); //fixed class/component name
+		//failovers
 		this._listenerBuffs = {once:[], on:[]}; //listener cache before given $el
+		this._coopevBuffs = []; //coop events cache for replay
 		//extension point: coop (so you can have global events forwarded to this view)
 		this._postman = {};
 		_.each(this.coop, function(ge){
 			var self = this;
 			self._postman[ge] = function(){
-				if(self.isInDOM()){
+				//in DOM or haven't been rendered (loading data in init()...)
+				if(self.isRendered(true) || !self.isRendered()){
 					var args = _.toArray(arguments);
 					args.unshift(ge);
 					self.trigger.apply(self, args);
 				}
+				//not in DOM and has been rendered before, clean it up
 				else {
-					if(app.ve._rendered[self.getUID()]){
-						app.coordinator.off(ge, self._postman[ge]);
-					}
+					app.coordinator.off(ge, self._postman[ge]);
 				}
 			};
 			app.coordinator.on(ge, self._postman[ge]);
@@ -209,9 +211,11 @@
 
 			//render 
 			this.$el.html(content);
+			this._el0 = this.$el.children()[0];//used later in isRendered(isInDOM)
+			app.ve._rendered[this._uid] = this.$el; //used later in isRendered()
 			//render sub components
 			if(this.deps){
-				//non-amd guard
+				//non-amd: auto fill this.deps (since ve.component([deps]) in this mode won't prep that.)
 				if(_.isArray(this.deps))
 					this.deps = _.reduce(this.deps, function(resolved, np){
 						resolved[app.tplNameToCompName(np)] = [];
@@ -232,7 +236,9 @@
 				});
 			}
 			this.$el.data('view', this);
-			//re-render but not registering the listeners again.
+
+			//register events
+			//re-render will not registering the listeners again.
 			if(!this.$el.data('_events_')) {
 				//format <e> <selectors>, instead of <e1> <e2> ...
 				_.each(this.events, function(fn, namenselector){
@@ -240,9 +246,9 @@
 					var tmp = _.compact(namenselector.split(' '));
 					name = tmp.shift();
 					if(_.size(tmp))
-						this.$el.on(name, tmp.join(' '), fn);
+						this.on(name, tmp.join(' '), fn);
 					else
-						this.$el.on(name, fn);
+						this.on(name, fn);
 				}, this);
 
 				//add cached listeners from before (without a $el)
@@ -251,7 +257,6 @@
 						this[type].apply(this, args);
 					}, this);
 				}, this);
-				delete this._listenerBuffs;//cleanup
 
 				this.$el.data('_events_', true);
 
@@ -276,13 +281,19 @@
 				});
 			}
 
-			app.ve._rendered[this._uid] = this.$el;
 			this.trigger('render');
+
+			//replay all cached co-op events (disable: clear this._coopevBuffs in `render` listener.)
+			while(this._coopevBuffs.length){
+				var args = this._coopevBuffs.shift();
+				this.trigger.apply(this, args);
+			}
+
 			return this;
 		},
 
 		teardown: function(){
-			if(this.$el){
+			if(this.isRendered(true)){
 
 				//cleanup global events forwarding registry.
 				_.each(this._postman, function(fn, ge){
@@ -305,6 +316,8 @@
 				this.off();
 				//remove self from instance registery.
 				delete app.ve._rendered[this._uid];
+				//unlock $el (the teardowned view can be rendered on other $el again...0.0)
+				this.$el = undefined;
 			}
 		},
 
@@ -312,7 +325,7 @@
 		once: function(){
 			var args = this._guardEveListenerArgs('once', arguments);
 
-			if(this.$el) {
+			if(this.isRendered()) {
 				this.$el.one.apply(this.$el, args);
 				this.$el.data('_events_', true);
 			}
@@ -324,7 +337,7 @@
 		on: function(){
 			var args = this._guardEveListenerArgs('on', arguments);
 
-			if(this.$el) {
+			if(this.isRendered()) {
 				this.$el.on.apply(this.$el, args);
 				this.$el.data('_events_', true);
 			}
@@ -335,15 +348,16 @@
 
 		//event listener clean up
 		off: function(){
-			if(this.$el) {
+			if(this.isRendered(true)) {
 				this.$el.off.apply(this.$el, arguments);
 			}
 			return this;
 		},
 
 		//allows both (e, [ extraparams array/object]) and (e, extraparam1, extraparam2, ...)
+		//with coop events cache support.
 		trigger: function(){
-			if(this.$el) {
+			if(this.isRendered()) {
 				var args = arguments;
 				//since $.triggerHandler only accepts (e, [...])
 				if(arguments.length > 2) {
@@ -352,13 +366,16 @@
 				}
 				//note that we use triggerHandler instead of trigger to avoid custom event bubbling
 				this.$el.triggerHandler.apply(this.$el, args);
+			}else {
+				this._coopevBuffs.push(arguments);
 			}
 			return this;
 		},
 
 		//allows both (e, [ extraparams array/object]) and (e, extraparam1, extraparam2, ...)
+		//withOUT coop events cache support.
 		$trigger: function(){
-			if(this.$el) {
+			if(this.isRendered()) {
 				var args = arguments;
 				//since $.trigger only accepts (e, [...])
 				if(arguments.length > 2) {
@@ -380,9 +397,14 @@
 			return this._uid;
 		},
 
-		isInDOM: function(){
+		//Note: $el is the parent element the view attach to, the content is the view template.
+		//Note: isRendered != isInDOM
+		//Note: isRendered() will be truthy before the `render` event gets triggered (so that its listeners can be registered)
+		isRendered: function(isInDOM){
 			if(!this.$el) return false;
-			return $.contains(document.documentElement, this.$el[0]);
+			if(isInDOM)
+				return $.contains(document.documentElement, this._el0);
+			return app.ve._rendered[this.getUID()]? true : false;
 		},
 
 		//fix and inject {view: self} into all event listener args as e.data.view.
@@ -460,7 +482,7 @@
 	//-----------------hooks into app infrastructure-------------------
 	//convert templates into components (support: non-amd development)
 	//use app.ve.component('<same name>', {+listeners}) later to extend view definition.
-	app.coordinator.on('app.load', function(){
+	app.coordinator.on('app:load', function(){
 
 		_.each(app.templates, function(tpl, filename){
 			var name = app.tplNameToCompName(filename, app.ve._tplSuffix);
@@ -471,7 +493,7 @@
 			app.debug('component registered:', name);
 		});
 
-		app.coordinator.trigger('app.loaded');
+		app.coordinator.trigger('app:loaded');
 	});
 	
 	//----------------apis enhancement to app-------------------------
@@ -495,8 +517,6 @@
 
 	//defines a view blueprint (support: both static and amd development)
 	app.ve.component = function(name, configure){
-
-		//app.debug('app.ve.component call:', arguments);
 
 		if(!configure) {
 			configure = name;
@@ -527,8 +547,6 @@
 			//register
 			app.ve._components[name] = View.extend(_.extend({_name: name}, configure));
 
-		//app.debug('app.ve._components:', app.ve._components);
-
 		return app.ve._components[name];
 
 	};
@@ -546,12 +564,11 @@
 	};
 		//internal worker for ve.inject (single target, cb(err, result))
 		function _inject (options, cb){
-			if(!app.isAMD()) app.throw('AMD is not enabled, use task:amd before ve.inject()');
+
 			if(_.isString(options))
 				options = {path: options};
 			if(_.isFunction(options)){
-				cb = options;
-				options = {};
+				app.throw('You must reveal the path to your component...');
 			}
 			options = _.extend({
 				baseURL: app.amd.commonRoot,
@@ -564,8 +581,11 @@
 				options.path = options.path.replace(/:static$/, '');
 			}
 			var compName = options.forceName?options.forceName:app.tplNameToCompName(options.path);
-			if(!app.param('debug') && app.ve.get(compName)) return cb(null, app.ve.get(compName));//components cache hit
-
+			//check components cache first
+			var cached = app.ve.get(compName);
+			if(cached) return cb(null, cached);
+			else if(!app.isAMD()) cb(new Error('Component Not Found: ' + compName));
+			
 			var tplTarget = _.endsWith(options.path, '/')?[options.baseURL, options.path, 'index', app.ve._tplSuffix].join(''):[options.baseURL, options.path, app.ve._tplSuffix].join(''),
 			jsTarget = tplTarget.replace(app.ve._tplSuffix, '');
 			var targets = ['text!' + tplTarget];

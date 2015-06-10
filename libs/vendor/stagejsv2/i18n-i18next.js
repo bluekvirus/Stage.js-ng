@@ -37,7 +37,7 @@
 
 	app._cache.missingKeys = app._cache.missingKeys || {};
 
-	app.coordinator.on('app.load', function(){
+	app.coordinator.on('app:load', function(){
 		i18n.init({
 			detectLngQS: 'locale',
 			resGetPath: 'i18n/__lng__/__ns__.json',
@@ -52,7 +52,7 @@
 			}
 		}, function(t){
 			app.i18n = t;
-			app.coordinator.trigger('app.loaded');
+			app.coordinator.trigger('app:loaded');
 		});
 
 	});

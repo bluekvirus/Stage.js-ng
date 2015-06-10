@@ -61,11 +61,11 @@
 
 	//-----------------hooks into app infrastructure-------------------
 	//convert templates into web components
-	app.coordinator.on('app.load', function(){
+	app.coordinator.on('app:load', function(){
 
 		//since rcu uses promise, we need to wait for all conversions to complete
 		var done = _.after(_.size(app.templates), function(){
-			app.coordinator.trigger('app.loaded');
+			app.coordinator.trigger('app:loaded');
 		});
 
 		_.each(app.templates, function(tpl, filename){

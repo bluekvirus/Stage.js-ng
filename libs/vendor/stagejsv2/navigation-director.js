@@ -33,7 +33,7 @@
 		routes: {
 			//default routing implementation (forward the navigation e, params):
 			'([^/]+)/?([^/]*)/?(.*)': function(ctx, item, rest){
-				app.coordinator.trigger('app.navigate', ctx, item, rest); //--> <*required>
+				app.coordinator.trigger('app:navigate', ctx, item, rest); //--> <*required>
 			}			
 		},
 
@@ -49,7 +49,7 @@
 	});
 
 	//-------------------------upon app.ready, activate-------------------
-	app.coordinator.once('app.ready', function(){
+	app.coordinator.once('app:ready', function(){
 		//kick off navigation
 		app.router = new Router(app.routes).init(app.home);
 	});

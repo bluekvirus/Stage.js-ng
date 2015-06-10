@@ -10,7 +10,7 @@
 	app.config({
 		coordinator: new EventEmitter({
 			wildcard: true, //enable a.* and a.*.c as event name
-			delimiter: '.', //in between name segments (for wildcard matching)
+			delimiter: ':', //in between name segments (for wildcard matching)
 			maxListeners: 15 //per event
 		}),
 	});

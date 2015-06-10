@@ -7,13 +7,13 @@ app.config({
 });
 
 //initialize main view
-app.coordinator.on('app.initialize', function(){
+app.coordinator.on('app:initialize', function(){
 	new (app.ve.get('main'))({el: app.$container});
-	app.coordinator.trigger('app.initialized');
+	app.coordinator.trigger('app:initialized');
 });
 
 //listen to navigation event
-app.coordinator.on('app.navigate', function(ctx, item, rest){
+app.coordinator.on('app:navigate', function(ctx, item, rest){
 	app.debug('@context', ctx, '@item', item, '@rest', rest);
 });
 

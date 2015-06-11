@@ -596,19 +596,16 @@
 				//as success cb
 				if(js.deps)
 					//recursively inject the sub components
-					app.ve.inject(js.deps, function(err, Comps){
+					app.ve.inject(js.deps, function(err, DepComps){
 						if(err) cb(err);
 						else {
-							Comps.push(
-								app.ve.component(compName, _.extend(js, {
-									template: tpl,
-									deps: _.reduce(Comps, function(deps, Comp){
-										deps[Comp.prototype._name] = [];//instance uids
-										return deps;
-									}, {})
-								}))
-							);
-							cb(null, Comps);
+							cb(null, app.ve.component(compName, _.extend(js, {
+							    template: tpl,
+							    deps: _.reduce(DepComps, function(deps, Comp) {
+							        deps[Comp.prototype._name] = []; //instance uids
+							        return deps;
+							    }, {})
+							})));
 						}
 					});
 				else

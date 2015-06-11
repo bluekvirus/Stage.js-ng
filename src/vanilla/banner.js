@@ -4,7 +4,8 @@ app.ve.component({
 	init: function(ready){
 		var self = this;
 		app.com.ajax('data/sample.json').done(function(data){
-			self.data = data;
+			self.data = data; //double check your JSON format. (no extra ','s)
+		}).always(function(){
 			ready();
 		});
 

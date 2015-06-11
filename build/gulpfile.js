@@ -200,7 +200,8 @@ function cssTask(){
 			paths: [
 				configure.root, 
 				path.join(configure.root, 'libs'), 
-				path.join(configure.root, 'libs', 'bower_components')
+				path.join(configure.root, 'libs', 'bower_components'),
+				path.join(configure.root, 'libs', 'vendor')
 			]
 
 		}))

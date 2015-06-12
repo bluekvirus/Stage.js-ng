@@ -83,6 +83,11 @@ var argv = require('yargs').options({
 		alias: 'keep',
 		describe: 'Whether to keep original .js/css/html files during compress.',
 		default: false
+	},
+	'T': {
+		alias: 'target',
+		describe: 'Filter targets in task:js and task:watch',
+		default: '' //',' (comma) separated list
 	}
 }).argv;
 if(argv.h || argv.help) {
@@ -95,6 +100,11 @@ if(argv.h || argv.help) {
 var configure = require(path.join(__dirname, 'config', argv.C));
 configure.root = configure.root || path.join(__dirname, '..');
 configure.production = argv.P;
+configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
+	targets[t] = true;
+	return targets;
+}, {});
+configure.targets = _.size(configure.targets)? configure.targets : false;
 console.log('Using configure:', argv.C.yellow);
 
 
@@ -116,6 +126,7 @@ function jsTask(cb, compileonly, subset){
 	var merged = mergeStream();
 	_.forIn(configure.javascript, function(v, k){
 		//v --> entrypoint/array, k --> js target
+		if(configure.targets && !configure.targets[k]) return;
 		if(compileonly && _.isArray(v)) return;
 		if(subset && !_.includes(subset, k)) return;
 		merged.add(
@@ -260,28 +271,34 @@ gulp.task('watch', 'Watching changes to src/style/template and rebuild', functio
 	};
 
 	//js
-	var jsTaskD = _.debounce(jsTask, cfg.delay.factor.debounce * cfg.delay.unit);
-	chokidar.watch(cfg.glob.js, cfg._general)
-	.on('all', function(e, path){
-		console.log('js', e.yellow, path);
-		jsTaskD(_.noop, 'compileonly');
-	});
+	if(configure.targets && configure.targets.js){
+		var jsTaskD = _.debounce(jsTask, cfg.delay.factor.debounce * cfg.delay.unit);
+		chokidar.watch(cfg.glob.js, cfg._general)
+		.on('all', function(e, path){
+			console.log('js', e.yellow, path);
+			jsTaskD(_.noop, 'compileonly');
+		});
+	}
 
 	//tpl
-	var tplTaskD = _.debounce(tplTask, cfg.delay.factor.debounce * cfg.delay.unit);
-	chokidar.watch(cfg.glob.tpl || configure.templates, cfg._general)
-	.on('all', function(e, path){
-		console.log('tpl', e.yellow, path);
-		tplTaskD();
-	});
+	if(configure.targets && configure.targets.tpl){
+		var tplTaskD = _.debounce(tplTask, cfg.delay.factor.debounce * cfg.delay.unit);
+		chokidar.watch(cfg.glob.tpl || configure.templates, cfg._general)
+		.on('all', function(e, path){
+			console.log('tpl', e.yellow, path);
+			tplTaskD();
+		});
+	}
 
 	//css
-	var cssTaskD = _.debounce(cssTask, cfg.delay.factor.debounce * cfg.delay.unit);
-	chokidar.watch(cfg.glob.css, cfg._general)
-	.on('all', function(e, path){
-		console.log('css', e.yellow, path);
-		cssTaskD();
-	});
+	if(configure.targets && configure.targets.css){
+		var cssTaskD = _.debounce(cssTask, cfg.delay.factor.debounce * cfg.delay.unit);
+		chokidar.watch(cfg.glob.css, cfg._general)
+		.on('all', function(e, path){
+			console.log('css', e.yellow, path);
+			cssTaskD();
+		});
+	}
 });
 
 

@@ -1,6 +1,7 @@
 /**
  * This is the base configure file for the build process.
  * (Do NOT modify unless you want to apply to all build configures)
+ * (It does NOT have the view engine files in the javascript.framework section, see default.js)
  * 
  * Base Path
  * ---------
@@ -94,17 +95,20 @@ module.exports = {
 			'libs/bower_components/director/build/director.js',
 			'libs/bower_components/i18next/i18next.js',
 			'libs/bower_components/validator-js/validator.js',
-			//-----------------------------------------
+			//------------------------widgets----------------------
+			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
+		],
+
+		//framework.js
+		framework: [
 			'libs/vendor/stagejsv2/infrastructure.js',
 			'libs/vendor/stagejsv2/coop-ee2-async.js',
 			'libs/vendor/stagejsv2/utils.js',
 			'libs/vendor/stagejsv2/com-ajax-ws-rtc.js',
 			'libs/vendor/stagejsv2/i18n-i18next.js',
 			'libs/vendor/stagejsv2/validate-validator.js',
-			'libs/vendor/stagejsv2/navigation-director.js',
-			//-----------------------------------------
-			'libs/bower_components/bootstrap/dist/js/bootstrap.js',
-		],
+			'libs/vendor/stagejsv2/navigation-director.js',		
+		]
 	},
 
 	//------------templates.json------------

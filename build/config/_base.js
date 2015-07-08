@@ -78,13 +78,12 @@ module.exports = {
 
 		//libs.js
 		libs: [
+			'libs/bower_components/detectizr/dist/detectizr.js',
+			'libs/bower_components/lodash/lodash.js',
 			'libs/bower_components/jquery/dist/jquery.js',
 			'libs/vendor/jquery-ui/position.js',
-			
-			//+DnD?
-			//+mobile ready e/tap/gestures?
-
-			'libs/bower_components/lodash/lodash.js',
+			'libs/bower_components/fastclick/lib/fastclick.js',
+			'libs/bower_components/interact/interact.js',
 			'libs/bower_components/eventemitter2/lib/eventemitter2.js',
 			'libs/bower_components/async/lib/async.js',
 			'libs/bower_components/director/build/director.js',

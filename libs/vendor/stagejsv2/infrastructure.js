@@ -1,13 +1,14 @@
 /**
  * The minimum app infrastructure for common SPA bootup.
- * (*requires lodash, jQuery)
+ * (*requires Lodash, jQuery, Modernizr, Detectizr)
  *
  * 
  * Process (app.start())
  * -------
- * config -> load(tpl, i18n, ...) -> init(main view, $plugins, screen event, ...) -> ready
+ * load(tpl, i18n, ...) -> init(main view, $plugins, screen event, ...) -> ready
  *
- * *Note*: You are responsible for timing app.start() with proper page/DOM ready event. Do NOT call it directly.
+ * *Note*: We help you time app.start() with proper DOM/device ready event.
+ * *Note*: If using AMD mode, see /src/entrypoint.js for calling app.start() inside module define().
  * 
  * 
  * APIs
@@ -39,6 +40,8 @@
  * - .param (get single or all of ?... search string params in url)
  * - .debug (activate when ?debug=true, replacing console.log calls)
  * - .throw (same as throwing an exception)
+ * - .isAMD
+ * - .isHybrid
  *
  * plugin: view-engine
  * - .ve.view
@@ -89,8 +92,7 @@
  *  
  * ####Sample Code:
  * ```
- * app.config({...})
- * $(function(){app.start();});
+ * app.config({...}).start();
  *      
  * app.coordinator.on('app:navigate', function(ctx, item, rest){
  * 	app.debug('@context', ctx, '@item', item, '@rest', rest);
@@ -198,16 +200,16 @@
 		$container: $('#app'),
 		home: 'home', //-->/#home if route empty. (see navigation-director.js)
 
-		//0. config (careful, it will override app it self)
+		//config (careful, it will override app it self)
 		config: function(newcfg){
-			return _.merge(this, newcfg);
+			return _.merge(app, newcfg);
 		},
 
 		//1. load external templates/components
 		_load: function(){ //--> [override]
 			//default *load* implementation:
 			//a. load templates.json into app.templates.
-			this.com.ajax({ 
+			app.com.ajax({ 
 				url: 'templates.json', 
 				data: { bust: app.param('debug')?(new Date()).getTime():'void' }
 			}).done(function(tpls){
@@ -231,17 +233,17 @@
 				app.coordinator.trigger('app:scroll');
 			});
 
-			this.coordinator.trigger('app:initialize'); //--> [extend]
+			app.coordinator.trigger('app:initialize'); //--> [extend]
 		},
 
 		//3. kickoff navigation
 		_ready: function(){
-			this.coordinator.trigger('app:ready'); //--> [extend]
+			app.coordinator.trigger('app:ready'); //--> [extend]
 		},
 
-		//entry point (support pause-by-each-step mode)
+		//4. entrypoint (support pause-by-each-step mode)
 		//Time this with page/DOM ready, do NOT call it directly.
-		start: function(){
+		_run: function(){
 			if(app.coordinator.listeners('app:load').length === 0)
 				app.coordinator.on('app:load', function(){
 					app.coordinator.trigger('app:loaded');
@@ -257,6 +259,21 @@
 				app._ready();
 			}));
 			app._load();
+		},
+
+		//ready event aware entrypoint wrapper
+		start: function(){
+			//jQuery ready
+			$(function(){
+				if(Modernizr.mobile) //(use detectizr extension for better device detection)
+					FastClick.attach(document.body);
+
+				if(app.isHybrid())
+					//Cordova deviceready
+					document.addEventListener('deviceready', app._run, false);
+				else
+					app._run();
+			});
 		}
 	};	
 

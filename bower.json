@@ -14,28 +14,31 @@
     "tests"
   ],
   "dependencies": {
-    "velocity": "~1.2.x",
+    "velocity": "~1.x.x",
     "handlebars": "~3.0.x",
     "kendo-ui-core": "~2015.1.528",
     "bootstrap": "~3.3.x",
     "bootstrap-material-design": "~0.3.x",
     "snackbarjs": "~1.x.x",
-    "nouislider": "~7.x.x",
-    
-    "owl-carousel2": "*"
+    "nouislider": "~7.x.x"
   },
   "devDependencies": {
     "modernizr": "~2.8.x",
+    "detectizr": "~2.x.x",
     "lodash": "~3.7.x",
     "jquery": "~2.1.x",
+    "interact": "~1.2.x",
+    "fastclick": "~1.0.x",
     "eventemitter2": "~0.4.x",
     "director": "~1.2.x",
     "i18next": "~1.8.x",
     "async": "~0.9.x",
     "validator-js": "~3.x.x",
     "fontawesome": "~4.3.x",
-
     "mocha": "~2.2.x",
     "chai": "~2.2.x"
+  },
+  "resolutions": {
+    "modernizr": "~2.8.x"
   }
 }

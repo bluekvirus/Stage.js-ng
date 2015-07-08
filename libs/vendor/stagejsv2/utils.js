@@ -10,8 +10,14 @@
 	app.config({
 		_cache: {},
 
+		//Require.js check
 		isAMD: function(){
-			return typeof define === "function" && define.amd;
+			return !!((typeof define === "function") && define.amd);
+		},
+
+		//Cordova check
+		isHybrid: function(){
+			return !!window.cordova && document.URL.indexOf('http://') === -1 && document.URL.indexOf('https://') === -1;
 		},
 
 		//convert template file name to view/component class name

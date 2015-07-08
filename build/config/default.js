@@ -23,7 +23,7 @@ var config = require('./_base.js');
 config.output = 'public/default';
 
 config.javascript.app = [
-	'src/vanilla/**/*.js',
+	'src/default/**/*.js',
 	'src/entrypoint.js'
 ];
 
@@ -49,7 +49,7 @@ config.javascript.framework.push(
 
 config.stylesheet = 'styles/default.less';
 
-config.templates = ['src/vanilla/**/*.hbs.html'];
+config.templates = ['src/default/**/*.hbs.html'];
 
 config.assets.push({
 	'libs/bower_components/bootstrap/dist/fonts/*': 'fonts',

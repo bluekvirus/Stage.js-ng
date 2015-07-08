@@ -2,7 +2,7 @@
 app.config({
 	//normally you don't need this configure, this is just in case you want to put src into a sub-folder.
 	amd: {
-		commonRoot: 'vanilla/'
+		commonRoot: 'default/'
 	}
 });
 
@@ -17,13 +17,10 @@ app.coordinator.on('app:navigate', function(ctx, item, rest){
 	app.debug('@context', ctx, '@item', item, '@rest', rest);
 });
 
-//kickstart app
-var start = function(){
-	$(function(){app.start();});
-};
+//kickstart app (with support to AMD)
 if(app.isAMD())
 	define(function(){
-		app.ve.inject('main', start);
+		app.ve.inject('main', app.start);
 	});
 else
-	start();
+	app.start();

@@ -1,0 +1,16 @@
+@import '_base';
+
+/*Important: 
+	1. You need to create theme.config under `semantic-ui/src/` (change with theme to use in theme.config)
+	2. You need to modify semantic-ui/src/themes/{name}/globals/site.variables with the following
+		```
+			@imagePath : '../images';
+			@fontPath  : '../fonts';
+		```
+	somehow putting the LESS variables here won't override the ones loaded by semantic.less...:S
+*/
+@import "semantic-ui/src/semantic.less";
+
+#app {
+
+}

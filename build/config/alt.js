@@ -1,7 +1,6 @@
 /**
  * Extend from the _base configure, support using:
- * 1. Twitter Bootstrap
- * 2. Bootstrap Material Design
+ * 1. Semantic UI
  *
  * Important Note
  * --------------
@@ -22,11 +21,7 @@ config.javascript.app = [
 
 config.javascript.libs.push(
 	//-----------------------tpl framework, widgets-----------------------
-	'libs/bower_components/bootstrap/dist/js/bootstrap.js',
-	'libs/bower_components/bootstrap-material-design/dist/js/material.js',
-	'libs/bower_components/bootstrap-material-design/dist/js/ripples.js',
-	'libs/bower_components/snackbarjs/src/snackbar.js',
-	'libs/bower_components/nouislider/distribute/nouislider.js'
+	'libs/bower_components/semantic-ui/dist/semantic.js'
 );
 
 config.stylesheet = 'styles/' + name + '.less';
@@ -34,9 +29,8 @@ config.stylesheet = 'styles/' + name + '.less';
 config.templates = ['src/' + name + '/**/*.hbs.html'];
 
 config.assets.push({
-	'libs/bower_components/fontawesome/fonts/*':'fonts',
-	'libs/bower_components/bootstrap/dist/fonts/*': 'fonts',
-	'libs/bower_components/bootstrap-material-design/dist/fonts/*': 'fonts'
+	'libs/bower_components/semantic-ui/dist/themes/default/assets/fonts/*':'fonts',
+	'libs/bower_components/semantic-ui/dist/themes/default/assets/images/*':'images',
 });
 
 module.exports = config; 

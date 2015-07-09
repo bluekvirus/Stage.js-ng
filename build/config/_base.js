@@ -89,8 +89,14 @@ module.exports = {
 			'libs/bower_components/director/build/director.js',
 			'libs/bower_components/i18next/i18next.js',
 			'libs/bower_components/validator-js/validator.js',
-			//------------------------no widgets-----------------------------------
-			//------------------------no tpl-engine, mvvm, fx/transition plugins---
+			//------------------------ve deps:tpl engine, mvvm, fx plugins-------
+			'libs/bower_components/handlebars/handlebars.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.core.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.data.js',
+			'libs/bower_components/kendo-ui-core/src/js/kendo.binder.js',
+			//'libs/bower_components/velocity/velocity.js', //$.velocity - animation [optional]
+			//'libs/bower_components/velocity/velocity.ui.js' //$.velocity.RegisterEffect/RunSequence - animation-seq [optional]
+			//------------------------no tpl framework, widgets------------------
 		],
 
 		//framework.js
@@ -102,7 +108,9 @@ module.exports = {
 			'libs/vendor/stagejsv2/i18n-i18next.js',
 			'libs/vendor/stagejsv2/validate-validator.js',
 			'libs/vendor/stagejsv2/navigation-director.js',
-			//------------------------no view-engine-------------------------------
+			//------------------------view engine--------------------------------
+			'libs/vendor/stagejsv2/template-helpers-hbs.js',
+			'libs/vendor/stagejsv2/view-engine.js'
 		]
 	},
 
@@ -126,7 +134,6 @@ module.exports = {
 		//copy and re-dir (put in different folder) *NOT rename!*
 		{
 			'libs/bower_components/modernizr/modernizr.js':'js',
-			'libs/bower_components/fontawesome/fonts/*':'fonts',
 		},
 	],
 

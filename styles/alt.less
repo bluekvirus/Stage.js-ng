@@ -6,13 +6,17 @@
 		```
 			@imagePath : '../images';
 			@fontPath  : '../fonts';
+			@importGoogleFonts: false;
 		```
 	3. You need to rename `semantic-ui/src/_site` to `semantic-ui/src/site (override vars here)
 
 	somehow putting the LESS variables here won't override the ones loaded by `semantic.less`...:S
+	somehow putting the LESS variables in `semantic-ui/src/site/globals/site.overrides` won't work neither...:S
 */
-@import "semantic-ui/src/semantic.less";
+@import 'semantic-ui/src/semantic.less';
+@import (inline) 'gwebfonts/Lato.css';
 
 #app {
-
+	padding: 1em;
+	overflow-y: auto;
 }

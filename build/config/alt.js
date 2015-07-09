@@ -29,6 +29,7 @@ config.stylesheet = 'styles/' + name + '.less';
 config.templates = ['src/' + name + '/**/*.hbs.html'];
 
 config.assets.push({
+	'libs/vendor/gwebfonts/Lato/*':'fonts',
 	'libs/bower_components/semantic-ui/dist/themes/default/assets/fonts/*':'fonts',
 	'libs/bower_components/semantic-ui/dist/themes/default/assets/images/*':'images',
 });

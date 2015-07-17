@@ -213,6 +213,7 @@
 				url: 'templates.json', 
 				data: { bust: app.param('debug')?(new Date()).getTime():'void' }
 			}).done(function(tpls){
+				//!!if you get tpls as 'string', check your web server's mime-type settings!!
 				app.templates = (app.templates?_.merge(app.templates, tpls):tpls) || {};
 			}).fail(function(){
 				app.templates = {};

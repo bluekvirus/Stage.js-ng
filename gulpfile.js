@@ -98,7 +98,7 @@ if(argv.h || argv.help) {
 
 // load the targeted configure.
 var configure = require(path.join(__dirname, 'config', argv.C));
-configure.root = configure.root || path.join(__dirname, '..');
+configure.root = configure.root || __dirname;
 configure.production = argv.P;
 configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
 	targets[t] = true;

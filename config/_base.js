@@ -6,7 +6,7 @@
  * Base Path
  * ---------
  * All path are based on the project root. 
- * [which is the same level of the build folder and not this configure file]
+ * [Not relative to this configure file]
  *
  * Configure
  * ---------

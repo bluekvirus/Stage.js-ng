@@ -1,13 +1,14 @@
 {
   "name": "build",
-  "version": "1.0.0",
-  "description": "build tool",
-  "main": "index.js",
+  "version": "0.12.1",
+  "description": "Build tool & dependencies",
+  "main": "gulpfile.js",
   "scripts": {
     "test": "N/A"
   },
   "author": "Tim Lauv <bluekvirus@gmail.com>",
-  "license": "N/A",
+  "repository": "https://github.com/bluekvirus/skeleton-webui.git",
+  "license": "MIT",
   "dependencies": {},
   "devDependencies": {
     "babelify": "^5.0.4",
@@ -33,7 +34,6 @@
     "gulp-sourcemaps": "^1.3.0",
     "gulp-uglify": "^1.1.0",
     "gulp-util": "^3.0.4",
-    "jshint-stylish": "^1.0.0",
     "lazypipe": "^0.2.2",
     "lodash": "^3.6.0",
     "merge-stream": "^0.1.7",

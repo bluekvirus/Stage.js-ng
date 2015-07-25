@@ -123,6 +123,7 @@ gulp.task('default', false,
 gulp.task('js', 'Compile/Concat js modules(es6)/libs', ['tpl'], jsTask);
 function jsTask(cb, compileonly, subset){
 	//console.log(configure.javascript);
+	if(!configure.javascript) return;
 	var merged = mergeStream();
 	_.forIn(configure.javascript, function(v, k){
 		//v --> entrypoint/array, k --> js target
@@ -175,6 +176,7 @@ var jspipe = {
 gulp.task('tpl', 'Combine HTML templates/components', tplTask);
 function tplTask(){
 	//console.log(configure.templates);
+	if(!configure.templates) return;
 	var tpls = {}; // --> JSON.stringify() upon 'finish'
 	var file = new gutil.File({path: 'templates.json'});
 	return gulp.src(configure.templates, {cwd: configure.root})
@@ -205,6 +207,7 @@ function tplTask(){
 gulp.task('css', 'Compile css from LESS', cssTask);
 function cssTask(){
 	//console.log(configure.stylesheet);
+	if(!configure.stylesheet) return;
 	return gulp.src(configure.stylesheet, {cwd: configure.root})
 		.pipe(plumber())
 		.pipe(less({
@@ -229,6 +232,7 @@ function cssTask(){
 gulp.task('assets', 'Copy/Re-dir assets', assetsTask);
 function assetsTask(){
 	//console.log(configure.assets);
+	if(!configure.assets) return;
 	var glob = [], renameMap = {};
 	_.each(configure.assets, function(a){
 		if(_.isString(a)) glob.push(a);

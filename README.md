@@ -10,26 +10,24 @@ git clone https://github.com/bluekvirus/skeleton-webui.git .
 ###2. Initialize it:
 ```
 bower install
-
-cd ./build
 npm install
 ```
 
 ###3. Build/Watch/Tasks:
 ```
-cd ./build
 gulp
-gulp watch
+gulp js --target libs,app
+gulp amd
+gulp watch --target css
 gulp help
 ```
-See [Gulpfile](build/gulpfile.js) for task definitions under `./build`. 
+See [Gulpfile](gulpfile.js) for task definitions. 
 
 You can also use a different build configure file by typing:
 ```
-cd ./build
 gulp -C, --config <name>
 ```
-Always extend from the default configure file and put newly created configure under `./build/config`.
+Always extend from the default configure file and put newly created configure under `./config`.
 
 
 ##Note

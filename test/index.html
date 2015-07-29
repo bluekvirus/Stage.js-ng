@@ -10,7 +10,7 @@
     <div id="mocha"></div>
     <script src="js/libs.js"></script>
     <script src="js/framework.js"></script>
-    <script>mocha.setup('bdd');</script>
+    <script>mocha.setup('bdd');var expect = chai.expect;</script>
     <script src="js/tests.js"></script>
     <script>
       mocha.run();

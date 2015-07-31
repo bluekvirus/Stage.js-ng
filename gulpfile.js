@@ -18,6 +18,7 @@
  * 6. clean: clear the output folder.
  * 7. watch: watching changes and re-run js, css and tpl tasks.
  * 8. amd: continue development after build, using requirejs. (--production to copy /src instead of symlink it)
+ * 9. serve: control a static development web server (bin/http-server).
  *
  * (tasks using `return gulp.src()...` will be running in parallel)
  *
@@ -262,6 +263,49 @@ function assetsTask(){
 
 
 //========
+//compress (+templates.json?)
+//========
+gulp.task('compress', 'Minify and Gzip the js/html/css files', function compressTask(){
+	var filters = {
+		js: filter('**/*.js'),
+		css: filter('**/*.css'),
+		html: filter('**/*.html')
+	};
+	return gulp.src(['**/*.js', '**/*.css', '**/*.html'], {cwd: path.join(configure.root, configure.output), follow: false})
+		.pipe(filters.js)
+		.pipe(uglify(configure.plugins.uglify))
+		.pipe(filters.js.restore())
+
+		.pipe(filters.css)
+		.pipe(mincss(configure.plugins['minify-css']))
+		.pipe(filters.css.restore())
+
+		.pipe(filters.html)
+		.pipe(gulpif(argv.keep, replace(/(\.css|\.js)/g, '.min$1'))) //ref the minified version in minified html.
+		.pipe(minhtml(configure.plugins['minify-html']))
+		.pipe(filters.html.restore())
+
+		.pipe(gulpif(argv.keep, rename({suffix: '.min'})))
+		.pipe(size({showFiles: true, title: 'compress:minify'}))
+		.pipe(gulp.dest(configure.output, {cwd: configure.root}))
+		.pipe(gzip(configure.plugins.gzip))
+		.pipe(size({showFiles: true, title: 'compress:gzip'}))
+		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
+});
+
+
+//=====
+//clean
+//=====
+gulp.task('clean', 'Purge the output folder', function cleanTask(){
+	var deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
+	console.log('Files deleted:', deletedFiles.length);
+	if(deletedFiles.length) deletedFiles.push('');// add an empty line.
+	console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
+});
+
+
+//========
 //watch (using chokidar)
 //========
 gulp.task('watch', 'Watching changes to src/style/template and rebuild', function watchTask(){
@@ -303,49 +347,6 @@ gulp.task('watch', 'Watching changes to src/style/template and rebuild', functio
 			cssTaskD();
 		});
 	}
-});
-
-
-//========
-//compress (+templates.json?)
-//========
-gulp.task('compress', 'Minify and Gzip the js/html/css files', function compressTask(){
-	var filters = {
-		js: filter('**/*.js'),
-		css: filter('**/*.css'),
-		html: filter('**/*.html')
-	};
-	return gulp.src(['**/*.js', '**/*.css', '**/*.html'], {cwd: path.join(configure.root, configure.output), follow: false})
-		.pipe(filters.js)
-		.pipe(uglify(configure.plugins.uglify))
-		.pipe(filters.js.restore())
-
-		.pipe(filters.css)
-		.pipe(mincss(configure.plugins['minify-css']))
-		.pipe(filters.css.restore())
-
-		.pipe(filters.html)
-		.pipe(gulpif(argv.keep, replace(/(\.css|\.js)/g, '.min$1'))) //ref the minified version in minified html.
-		.pipe(minhtml(configure.plugins['minify-html']))
-		.pipe(filters.html.restore())
-
-		.pipe(gulpif(argv.keep, rename({suffix: '.min'})))
-		.pipe(size({showFiles: true, title: 'compress:minify'}))
-		.pipe(gulp.dest(configure.output, {cwd: configure.root}))
-		.pipe(gzip(configure.plugins.gzip))
-		.pipe(size({showFiles: true, title: 'compress:gzip'}))
-		.pipe(gulp.dest(configure.output, {cwd: configure.root}));
-});
-
-
-//=====
-//clean
-//=====
-gulp.task('clean', 'Purge the output folder', function cleanTask(){
-	var deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
-	console.log('Files deleted:', deletedFiles.length);
-	if(deletedFiles.length) deletedFiles.push('');// add an empty line.
-	console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
 });
 
 
@@ -397,5 +398,18 @@ gulp.task('amd', 'Create links to /src and continue dev after build', ['js'], fu
 	//3. clear templates.json
 	configure.templates = [];
 	tplTask();
+
+});
+
+
+//=====
+//serve (through forever-monitor & http-server)
+//=====
+gulp.task('serve', 'Start/Stop the development static server', function serverControlTask(){
+
+	var forever = require('forever-monitor');
+	forever.start(['node_modules/.bin/http-server', configure.output, '-p', argv.port || '5001', '-c-1'], {
+		max: 1,
+	});
 
 });

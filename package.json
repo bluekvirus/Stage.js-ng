@@ -7,7 +7,7 @@
     "test": "N/A"
   },
   "author": "Tim Lauv <bluekvirus@gmail.com>",
-  "repository": "https://github.com/bluekvirus/skeleton-webui.git",
+  "repository": "https://github.com/bluekvirus/Stage.js-ng.git",
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {

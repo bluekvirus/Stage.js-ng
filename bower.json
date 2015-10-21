@@ -1,8 +1,8 @@
 {
-  "name": "libs",
+  "name": "stage.js-ng",
   "version": "0.12.1",
   "homepage": "N/A",
-  "description": "3rd party libraries",
+  "description": "Stage.js next-gen",
   "main": "N/A",
   "license": "MIT",
   "private": true,

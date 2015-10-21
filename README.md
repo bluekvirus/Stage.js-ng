@@ -1,10 +1,10 @@
-#WebUI Skeleton
+#Stage.js Next Generation
 Blueprint for single page web/hybrid front-end projects. With minimum code infrastructure, empty folders and a full-featured build tool (through [gulp](http://gulpjs.com/)).
 
 ##Usage
-###1. Create your project:
+###1. Create your project: (Don't forget the `.` in the end)
 ```
-git clone https://github.com/bluekvirus/skeleton-webui.git .
+git clone https://github.com/bluekvirus/Stage.js-ng.git .
 ```
 
 ###2. Initialize it:

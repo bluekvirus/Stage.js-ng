@@ -14,7 +14,7 @@ bower install
 npm install
 ```
 
-###3. Build/Watch/Tasks:
+###3. Build/Watch Tasks:
 ```
 gulp
 gulp js --target libs,app

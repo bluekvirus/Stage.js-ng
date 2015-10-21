@@ -2,10 +2,11 @@
 Blueprint for single page web/hybrid front-end projects. With minimum code infrastructure, empty folders and a full-featured build tool (through [gulp](http://gulpjs.com/)).
 
 ##Usage
-###1. Create your project: (Don't forget the `.` in the end)
+###1. Create your project:
 ```
 git clone https://github.com/bluekvirus/Stage.js-ng.git .
 ```
+Don't forget the `.` in the end.
 
 ###2. Initialize it:
 ```

@@ -61,25 +61,96 @@ import less from 'gulp-less';
 import lint from 'gulp-jslint';
 import gutil from 'gulp-util';
 import gsize from 'gulp-size';
+import path from 'path';
+import through2 from 'through2';
 
 
+// load the targeted configure.
+var configure = require(path.join(__dirname, 'config', '_base'));
+configure.root = configure.root || __dirname;
+
+
+
+
+
+
+
+
+
+
+
+
+// __dirname is always the directory in which the currently executing script resides.
 gulp.task('default', () => console.log('Default task called'));
+
+
+//default is just main.js as entry -> bundle.js assume is es6
+gulp.task('js', () => {
+     if(!configure.javascript) return; //nothing to do
+
+
+
+
+
+
+});
 
 gulp.task('tpl', () => {
     //if the user does not want to combine templates than we end this task
     if(!configure.templates) return;
     //default if user does not specify output file name. Will be put in current output directory dist or whatever
-    var outputFile = new gutil.File({ path: '${configure.templates.target}.json'}); 
-    return gulp.src(configure.templates, {cwd: configure.root})
+    const outputFile = new gutil.File({ path: `${configure.templates.target}.json`}); 
+    const tpls = {};
+    return gulp.src(configure.templates.src, {cwd: configure.root})
            .pipe(gsize({title: 'tpl-process', showFiles: true })) //just for logging purposes of size of each file in tpl-process
-           .pipe(through2.obj((htmlFile, enc, cb) => {
-                //double check if this is necessary or still is a bug??
+           .pipe(through2.obj(function(htmlFile, enc, cb){
                 if( htmlFile.isBuffer()){
-                    //save this current htmlfile path and its contents into template object
-        
+                    //must be a buffer for most plugins to work b/c gulp can't handle stream of streams
+                    gutil.log(`${htmlFile.relative} is being worked on`);
+                    tpls[htmlFile.relative] = (String(htmlFile.contents));
                 }
-	        
-    
+                cb(); //end of each file
+            }, function(cb){
+                outputFile.contents = new Buffer(JSON.stringify(tpls, null, 2));
+                this.push(outputFile); //don't use arrow function here because we need this
+                cb(); //must call at end of this flush function
+            }))
+           .pipe(gsize({showFiles: true, title: 'tplfinal'})) //could minify templates.json later if needed and remove whitespace if user wants
+           .pipe(gulp.dest(configure.output, {cwd: configure.root}));
+}); //end of tpl task
 
+//===
+//tpl (using through2 to transform/combine files in stream)
+//===
+/*gulp.task('tpl', 'Combine HTML templates/components', tplTask);
+function tplTask(){
+    //console.log(configure.templates);
+    if(!configure.templates) return;
+    var tpls = {}; // --> JSON.stringify() upon 'finish'
+    var file = new gutil.File({path: 'templates.json'});
+    return gulp.src(configure.templates, {cwd: configure.root})
 
-});
+        .pipe(size({showFiles: true, showTotal: false, title: 'tpl'}))
+        .pipe(through.obj(function(file, encode, cb){
+             gutil.log('files');
+            //on 'file'
+            //file is a vinyl File object (https://github.com/wearefractal/vinyl)
+            if(file.isBuffer()){ //skipping isNull() & isStream()
+                tpls[file.relative] = (String(file.contents)); //use as is
+                //comments are preserved, no tag and attribute cleanup.
+            }
+            gutil.log('about to call the callback');
+            this.push(file); //here without flush func. would cause files to just be pushed along. Still two separate html files at end.
+// with the flush function the result will be the two html files plus the completed template.json file
+            cb();     //won't pass down the examined template file.
+        }, function(cb){ //this is technically the flush function
+            //on 'finish'
+            gutil.log('Inside of the callback');
+            gutil.log(file.contents);
+            file.contents = new Buffer(JSON.stringify(tpls, null, 2)); //utf-8
+            this.push(file); //pass down the overall merged json file.
+            cb();
+        }))
+        .pipe(size({showFiles: true, title: 'tplfinal'}))
+        .pipe(gulp.dest(configure.output, {cwd: configure.root}));
+}*/

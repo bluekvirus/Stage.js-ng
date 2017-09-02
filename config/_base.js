@@ -116,7 +116,11 @@ module.exports = {
 
 	//------------templates.json------------
 	// put together with js modules under /src (re-combine during `watch`)
-	templates: ['src/**/*.html'],
+	templates: {
+					src: ['src/**/*.html'],
+					target: "mytemplates"
+                    
+},
 
 	//-----------------style----------------
 	// into app.css, (re-compile during `watch`)

@@ -54,21 +54,67 @@
  * @created 2017.8.31
  */
 
-
+import colors from 'colors';
 import gulp from 'gulp';
 import sass from 'gulp-sass';
 import less from 'gulp-less';
-import lint from 'gulp-jslint';
+import jslint from 'gulp-jslint';
 import gutil from 'gulp-util';
 import gsize from 'gulp-size';
 import path from 'path';
 import through2 from 'through2';
+import _ from 'lodash';
+import browserify from 'browserify';
+import babelify from 'babelify';
+import uglify from 'gulp-uglify';
+import gulpif from 'gulp-if';
+import lazypipe from 'lazypipe';
+import concat from 'gulp-concat-util'
+import sourcemaps from 'gulp-sourcemaps'
+import mergeStream from 'merge-stream' //more popular than gulp-merge or merge2
+import rename from 'gulp-rename'
 
 
+//configure commandline options, grabbed from the original stagesnextgen
+var argv = require('yargs').options({
+    'C': {
+        alias: 'config',
+        describe: 'Specify a customized configure file to override base ones.',
+        default: 'default'
+    },
+    'P': {
+        alias: 'production',
+        describe: 'Further controls behavior of the amd task.',
+        default: false
+    },
+    'K': {
+        alias: 'keep',
+        describe: 'Whether to keep original .js/css/html files during compress.',
+        default: false
+    },
+    'T': {
+        alias: 'target',
+        describe: 'Filter targets in task:js and task:watch',
+        default: '' //',' (comma) separated list
+    }
+}).argv;
+
+if(argv.h || argv.help) {
+    console.log('Use', 'gulp help'.yellow, 'instead...');
+    //require('child_process').spawnSync('gulp', ['help'], {stdio: 'inherit'}); v0.12.x
+    process.exit();
+}
 // load the targeted configure.
-var configure = require(path.join(__dirname, 'config', '_base'));
+//import configure from `${__dirname}/config/${argv.C}`
+const configure = require(path.join(__dirname, 'config', argv.C));
 configure.root = configure.root || __dirname;
-
+//process the possible javascript targets passed through command line. If none then configure.targets = false. otherwise an object
+configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
+    targets[t] = true;
+    return targets;
+}, {});
+configure.targets = _.isEmpty(configure.targets) ? false : configure.targets;
+console.log('Using configure:', argv.C.yellow);
 
 
 
@@ -83,16 +129,70 @@ configure.root = configure.root || __dirname;
 // __dirname is always the directory in which the currently executing script resides.
 gulp.task('default', () => console.log('Default task called'));
 
+//making reusable pipeline for bundling, transpiling, minifying js
+const processJS = {
+    bundle: lazypipe()
+            .pipe(function () {
+                //lazypipe calls the function and passes in no args. It instantiates a new gulp-if pipe and returns it to lazypipe
+               return gulpif(configure.javascript.lint,  jslint());
+            })
+             //remember that you might need vinyl-transform to transform standard text transform streams from npm into a vinyl pipeline like gulp.
+             //can't do this anymore cause browserify now returns a readable stream but vinyl transform expects a duplex stream.
+            .pipe(through2,(jsFile, enc, cb) => {
+                browserify(jsFile.path, _.extend({debug: true}, configure.plugins.browserify))
+                .transform("babelify", _.extend({presets: ["es2015"]},configure.plugins.babel)) //gives presets" ["es2015"]
+                .bundle((err, results) => {
+                    jsFile.contents = results;
+                    cb(null, jsFile); //results placed into entrypoint file and returned. Wraps with vinyl file
+                });
+            })
+            .pipe(function() {
+                return gulpif(configure.javascript.minify, uglify(configure.plugins.uglify));
+            }),
+    concat: lazypipe()
+    //initialize a new gulp sourcemap. Will be a new property added to vinyl file objects
+            .pipe(sourcemaps.init)
+            .pipe(concat, 'tmp.js', {newLine: ';'})
+            .pipe(sourcemaps.write) //does not actually write the sourcemap, just tells gulp to materialize them into a physical file when you call gulp.dest
+
+            
+
+}
 
 //default is just main.js as entry -> bundle.js assume is es6
-gulp.task('js', () => {
-     if(!configure.javascript) return; //nothing to do
+gulp.task('js', ['tpl'], () => {
+     if(!configure.javascript) return; //nothing to do not in the config
+     if(_.isEmpty(configure.javascript)) // user wants the default behavior empty js config object. using lodash function isEmpty()
+     {
+        return gulp.src('main.js', {cwd: configure.root})
+            //our default behavior with main.js
+            //don/t need to print size because only one entry point file
+            .pipe(processJS.bundle())
+            .pipe(rename({dirname: 'js', basename: 'app'}))
+            .pipe(gulp.dest(configure.output, {cwd: configure.root})); //places app.js into the outfile folder    
+     }//end of default behavior
+     //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
+     var merged = mergeStream();
+     _.forIn(configure.javascript, function(value,target){
+        //v is the string/array of paths. k is the javascript target file
+        //if the target object exists and is not false. But this current target is filtered out just return to move on to next target
+        if(configure.targets && !configure.targets[target]) return;
+        //should we have a compile only option??
+        //if(configure.compileonly && _.isArray(value)) return; //should compile only meaning only do the non array values
+        merged.add((_.isArray(value) ? 
+                (gulp.src(value, {cwd: configure.root})
+                     .pipe(gsize({title: `${target}.js:concat`, showFiles: true}))
+                     .pipe(processJS.concat()))
+        :
+                (gulp.src(value, {cwd: configure.root})
+                    .pipe(processJS.bundle()))
+                    )//ends ternary
+             .pipe(rename({basename: target, dirname: 'js'})) //everything js related is placed in js folder in output folder.]
+             .pipe(gulp.dest(configure.output, {cwd: configure.root}))
+        ); //ends merge.add
+     }); //ends forIn loop
 
-
-
-
-
-
+     return merged.pipe(gsize({title: 'alljs', showFiles: true}));
 });
 
 gulp.task('tpl', () => {

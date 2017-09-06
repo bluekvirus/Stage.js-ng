@@ -31,8 +31,8 @@ config.javascript.libs.push(
 
 config.stylesheet = 'styles/' + name + '.less';
 
-config.templates = ['src/' + name + '/**/*.hbs.html'];
-
+config.templates.src = ['src/' + name + '/**/*.hbs.html'];
+//changed from config.templates to config.templates.src
 config.assets.push({
 	'libs/bower_components/fontawesome/fonts/*':'fonts',
 	'libs/bower_components/bootstrap/dist/fonts/*': 'fonts',

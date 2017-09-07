@@ -73,6 +73,7 @@ import concat from 'gulp-concat-util'
 import sourcemaps from 'gulp-sourcemaps'
 import mergeStream from 'merge-stream' //more popular than gulp-merge or merge2
 import rename from 'gulp-rename'
+import spritesmith from 'gulp.spritesmith'
 
 
 //configure commandline options, grabbed from the original stagesnextgen
@@ -218,6 +219,25 @@ gulp.task('tpl', () => {
            .pipe(gsize({showFiles: true, title: 'tplfinal'})) //could minify templates.json later if needed and remove whitespace if user wants
            .pipe(gulp.dest(configure.output, {cwd: configure.root}));
 }); //end of tpl task
+
+
+//task that generates sprite.png as well as corresponding .less/.css/.sass 
+//we can use spritesmith to generate sprite.png and sprite.less, then do one for font.less and one for texture.less. These are all then combined into img.less.
+//should end up when done with all css processing with a [themename].css file. We do this by going to the less files and combining into css.
+gulp.task('sprite', () => {
+    if (!configure.sprite) return; //have to add this to default config file, will configure sprites generation. Takes in a string path for default behavior or an object
+    //making sure we have default config in place
+    configure.sprite.root = configure.sprite.root || 'implementation/themes/default/img';
+    configure.sprite.src = configure.sprite.src || `${configure.sprite.root}/**/*.png`;
+    configure.sprite.target = configure.sprite.target || `sprite`; //default will be sprite.png and sprite.less basically same name
+    configure.sprite.format = configure.sprite.format || 'less'; //default preprocessor will be less not sass or css, can configure this here
+    return gulp.src(configure.sprite.src, {cwd: configure.root})
+               .pipe(spritesmith({
+                imgName: `${configure.sprite.target}.png`,
+                cssName: `${configure.sprite.target}.${configure.sprite.format}` //cssFormat is inferred by cssName's extension
+               }))
+               .pipe(gulp.dest(configure.sprite.root, {cwd: configure.root})); //will output both into this folder. later should be combined into img.less, img.sass etc/
+});
 
 //===
 //tpl (using through2 to transform/combine files in stream)

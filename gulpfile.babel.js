@@ -74,7 +74,8 @@ import sourcemaps from 'gulp-sourcemaps'
 import mergeStream from 'merge-stream' //more popular than gulp-merge or merge2
 import rename from 'gulp-rename'
 import spritesmith from 'gulp.spritesmith'
-
+import iconfont from 'gulp-iconfont'
+import iconfontCss from 'gulp-iconfont-css'
 
 //configure commandline options, grabbed from the original stagesnextgen
 var argv = require('yargs').options({
@@ -231,13 +232,55 @@ gulp.task('sprite', () => {
     configure.sprite.src = configure.sprite.src || `${configure.sprite.root}/**/*.png`;
     configure.sprite.target = configure.sprite.target || `sprite`; //default will be sprite.png and sprite.less basically same name
     configure.sprite.format = configure.sprite.format || 'less'; //default preprocessor will be less not sass or css, can configure this here
-    return gulp.src(configure.sprite.src, {cwd: configure.root})
-               .pipe(spritesmith({
-                imgName: `${configure.sprite.target}.png`,
-                cssName: `${configure.sprite.target}.${configure.sprite.format}` //cssFormat is inferred by cssName's extension
-               }))
-               .pipe(gulp.dest(configure.sprite.root, {cwd: configure.root})); //will output both into this folder. later should be combined into img.less, img.sass etc/
+    configure.sprite =  _.extend({root: 'implementation/themes/default/img', src: `${configure.sprite.root}/**/*.png`, target: 'sprite', format: 'less'},configure.sprite);
+    var merged = mergeStream();
+    //this stream deals with the sprite.png file/ sprite.less
+    var stream1 = gulp.src(configure.sprite.src, {cwd: configure.root})
+                      .pipe(spritesmith({
+                         imgName: `${configure.sprite.target}.png`,
+                         cssName: `${configure.sprite.target}.${configure.sprite.format}` //cssFormat is inferred by cssName's extension
+                  }))
+                      .pipe(gulp.dest(configure.sprite.root, {cwd: configure.root})); //will output both into this folder. later should be combined into img.less, img.sass etc/
+    //this stream will deal with generating web fonts from svg files and creating the resulting .css file
+    configure.iconfont.name = configure.fonts.name || 'CustomIconFont';
+    configure.fonts.formats = configure.fonts.formats || ['woff2', 'woff', 'ttf'];
+    configure.iconfont = _.extend({fontName: 'CustomIconFont'} })
+    var stream2 = gulp.src(`${configure.sprite.root}/**/*.svg`, {cwd: configure.root})
+                      .pipe(iconfont({
+                        fontName: configure.fonts.name,
+                        formats:  configure.fonts.formats,
+                        normalize: 
+                      }))
 });
+
+gulp.task('sprite', () => {
+    if ((!configure.sprite) && (!configure.iconfont) && (!configure.textures)) return; 
+    var merged = mergeStream();
+    if(configure.sprite)
+    {
+       configure.sprite =  _.extend({src: `implementation/themes/default/img/**/*.png`, target: 'sprite', outputPath: 'implementation/themes/dist/', format: 'less'},configure.sprite);
+       var stream1 = gulp.src(configure.sprite.src, {cwd: configure.root})
+                      .pipe(spritesmith({
+                         imgName: `${configure.sprite.target}.png`,
+                         cssName: `${configure.sprite.target}.${configure.sprite.format}` 
+                  }))
+                      .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root})); 
+    }
+    //this stream deals with the sprite.png file/ sprite.less
+    
+    //this stream will deal with generating web fonts from svg files and creating the resulting .css file
+    configure.iconfont.options = _.extend({fontName: 'CustomIconFont', normalize: true, prependUnicode: true, formats: ['woff2', 'woff', 'ttf'] }, configure.iconfont.options); //lots more options available passed directly into iconfont
+    configure.iconfont.src = configure.iconfont.src || 'implementation/themes/default/img/**/*.svg';
+    configure.iconfont.outputPath = configure.iconfont.outputPath || 'implementation/themes/dist';
+    //iconfontcss fontname has to be the same as the one we pass to iconfont
+    var stream2 = gulp.src(`${configure.sprite.root}/**/*.svg`, {cwd: configure.root})
+                      .pipe(iconfontCss({
+                        fontName
+                      }))
+                      .pipe(iconfont(configure.iconfont.options))
+});
+
+
 
 //===
 //tpl (using through2 to transform/combine files in stream)

@@ -1,0 +1,132 @@
+/**
+ * Mixins for giving certain el additional css features;
+ *
+ * @author Tim Lauv
+ * @created 2017.01.11
+ */
+
+.box-sizing() {
+    //so that border grows inwards with width/height set;
+    box-sizing: border-box !important;
+}
+
+.paddable() {
+    &.padded {
+        padding: @gap-padded-size;
+    }
+}
+
+.vfillable() {
+    &.vfill {
+        height: 100%;
+        &.half {
+            height: 50%;
+        }
+        &.third {
+            height: 33.3%;
+        }
+        &.quarter {
+            height: 25%;
+        }
+    }
+}
+
+.borders(@radius : 0, @size : 1px) {
+    border-width: @size;
+    border-radius: @radius;
+    &.border {
+        border-style: solid;
+    }
+    &.dashed {
+        border-style: dashed;
+    }
+    &.dotted {
+        border-style: dotted;
+    }
+    &.double {
+        border-style: double;
+    }
+}
+
+//float el container (clearfix)
+.clearfix() {
+    overflow: visible;
+    zoom: 1;
+    /*
+     * Clearfix: contain floats (from h5bp:helpers)
+     *
+     * For modern browsers
+     * 1. The space content is one way to avoid an Opera bug when the
+     *    `contenteditable` attribute is included anywhere else in the document.
+     *    Otherwise it causes space to appear at the top and bottom of elements
+     *    that receive the `clearfix` class.
+     * 2. The use of `table` rather than `block` is only necessary if using
+     *    `:before` to contain the top-margins of child elements.
+     */
+    
+    &:before, &:after {
+        content: " ";
+        /* 1 */
+        
+        display: table;
+        /* 2 */
+    }
+    &:after {
+        clear: both;
+    }
+}
+
+//easy background picz
+.bg(@url) {
+    background: url(@url);
+    background-repeat: no-repeat;
+    background-position: center center;
+    &.vfill {
+        background-size: auto 100%;
+    }
+    &.full {
+        background-size: cover;
+    }
+    &.fixed {
+        background-attachment: fixed;
+    }
+}
+
+//easy web-font import
+.font(@name, @file) {
+    @font-face {
+        font-family: @name;
+        src: url('@{file}.woff2') format('woff2'), url('@{file}.woff') format('woff'), url('@{file}.ttf') format('truetype');
+    }
+}
+
+//screen spec styles wrapping helpers (mixins)
+.media-print(@rules) {
+    @media print {
+        @rules();
+    }
+}
+
+.media-too-small(@rules) {
+    @media (max-width: @screen-phone-min) {
+        @rules();
+    }
+}
+
+.media-phone(@rules) {
+    @media (min-width: @screen-phone-min) and (max-width: @screen-phone-max) {
+        @rules();
+    } 
+}
+
+.media-tablet(@rules) {
+    @media (min-width: @screen-tablet-min) and (max-width: @screen-tablet-max) {
+        @rules();
+    }
+}
+
+.media-pc(@rules) {
+    @media (min-width: @screen-pc-min) {
+        @rules();
+    }
+}

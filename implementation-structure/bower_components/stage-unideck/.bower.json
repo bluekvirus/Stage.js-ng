@@ -1,0 +1,40 @@
+{
+  "name": "stage-unideck",
+  "version": "0.9.4",
+  "description": "Responsive minimum CSS base for web projects",
+  "main": "stage-unideck.css",
+  "authors": [
+    "Tim Lauv <bluekvirus@gmail.com>",
+    "Patrick Zhu <beavercoding@gmail.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/bluekvirus/Stage-unideck",
+  "moduleType": [],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "**/*.sh"
+  ],
+  "devDependencies": {
+    "normalize-css": "normalize.css#^5.x.x",
+    "modernizr": "^3.5.0",
+    "detectizr": "^2.2.0",
+    "d3": "^4.9.1",
+    "d3-extended": "*",
+    "backbone": "^1.3.x",
+    "Faker": "^4.x.x",
+    "zeptojs": "^1.2.0"
+  },
+  "_release": "0.9.4",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.9.4",
+    "commit": "68d4f4fecbb4c62108ae7d515f423b21a4fade80"
+  },
+  "_source": "https://github.com/bluekvirus/Stage-unideck.git",
+  "_target": "~0.9.x",
+  "_originalSource": "stage-unideck"
+}

@@ -1,0 +1,177 @@
+/**
+ * Floating responsive layout .deck --> .unit-* --> .deck/.flex/.grid()/.frame --> ...
+ *
+ * With .padded, .vfill and borders (.deck and .unit-* have no height by default) as spacing helpers.
+ *
+ * Note: .deck is not position:relative, .unit-* are.
+ *
+ * @author Patrick Zhu, Tim Lauv
+ * @created 2017.01.11
+ */
+
+.deck {
+	//always give width 100% to deck and clearfix (use .vfill for auto height)
+	width: 100%;
+	.clearfix();
+
+	.box-sizing();
+	.paddable();
+	.vfillable();
+	.borders();
+
+	.unit, .unit-1 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 50%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 25%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 12.5%;
+		}
+	}
+
+	.unit-2 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 50%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 25%;
+		}
+	}
+
+	.unit-3 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 75%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 37.5%;
+		}
+	}
+
+	.unit-4 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 100%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 50%;
+		}
+	}
+
+	.unit-5 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 100%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 62.5%;
+		}
+	}
+
+	.unit-6 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 100%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 75%;
+		}
+	}
+
+	.unit-7 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 100%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 87.5%;
+		}
+	}
+
+	.unit-8 {
+		.deck-unit();
+		@media (max-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-phone-avg) {
+			width: 100%;
+		}
+		@media (min-width: @screen-tablet-min) {
+			width: 100%;
+		}
+		@media (min-width: @screen-pc-min) {
+			width: 100%;
+		}
+	}
+}
+
+//shared unit measures in a deck container
+.deck-unit() {
+    float: left;
+    position: relative;
+    min-height: 6 * @gap-padded-size;
+    .box-sizing();
+    .paddable();
+    .vfillable();
+    .borders();
+
+    //.vfill-ed .unit also means immediate view <div> will automatically stretch!
+    &.vfill {
+        > div,
+        > ul,
+        > ol,
+        > section,
+        > header,
+        > footer,
+        > aside,
+        > svg,
+        > canvas {
+            height: 100% !important;
+            max-height: 100% !important;
+            min-height: 100% !important;
+        }
+    }
+}

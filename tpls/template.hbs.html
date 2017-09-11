@@ -1,0 +1,20 @@
+<head><link rel="stylesheet" type="text/css" href="img.less"></head>
+<body>
+<h1>Sprite Icons & Textures</h1>
+<table>
+	<thead>
+		<th>Name</th>
+		<th>Preview</th>
+		<th>Usage</th>
+	</thead>
+	<tbody>
+	     {{#each sprites}}
+	                <tr>
+	                    <td>icon-{{ this.name }}</td>
+	                 <td style="padding:0.5em;"><i style = "width: {{this.width}}; height: {{this.height}}; display:block;" class = "icon-{{this.name}}"></td>
+	                 <td>&lt;i class=&quot;icon-{{this.name}}&quot;&gt;&lt;/i&gt;</td>
+	                </tr>
+	                {{/each}}
+	</tbody>
+</table>
+</body>

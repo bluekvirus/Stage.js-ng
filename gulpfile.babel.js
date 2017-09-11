@@ -78,8 +78,12 @@ import iconfont from 'gulp-iconfont'
 import iconfontCss from 'gulp-iconfont-css'
 import iconfontHtml from 'gulp-iconfont-template'
 import gulpfilter from 'gulp-filter'
-import hbs from 'gulp-hbs'
+//import hbs from 'gulp-hbs'
 import replace from 'gulp-replace'
+import handlebars from 'gulp-compile-handlebars'
+import data from 'gulp-data'
+
+
 
 //configure commandline options, grabbed from the original stagesnextgen
 var argv = require('yargs').options({
@@ -236,20 +240,25 @@ gulp.task('icon', () => {
        var stream1 = gulp.src(configure.sprite.src, {cwd: configure.root})
                       .pipe(spritesmith({
                          imgName: `${configure.sprite.targetName}.png`,
-                         cssName: `${configure.sprite.targetName}.${configure.sprite.format}` 
+                         cssName: `${configure.sprite.targetName}.${configure.sprite.format}`,
+                         imgPath: './img/sprite.png' 
                   }));
                      // .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}));  //need to combine the less files inside the stream somehow
        merged.add(stream1);
-       //const jsonf = gulpfilter('*.json');
-       /*var stream2 = gulp.src(configure.sprite.src, {cwd: configure.root})
+       const jsonf = gulpfilter('**/*.json');
+       var stream2 = gulp.src(configure.sprite.src, {cwd: configure.root})
                          .pipe(spritesmith({
                             imgName: `${configure.sprite.targetName}.png`,
-                            cssName: `${configure.sprite.targetName}.json` 
+                            cssName: `${configure.sprite.targetName}.json`,
+                            cssFormat: 'json_array' 
                          }))
                          .pipe(jsonf)
-                         //.pipe(hbs('src/theme/default.hbs'));
-        merged.add(stream2);*/
-       //have to do the json separately*/
+                         .pipe(replace("[", '{"sprites" : ['))
+                         .pipe(replace("]", "]}"))
+                         .pipe(gulp.dest('src/theme/', {cwd: configure.root}));
+
+       merged.add(stream2);
+       //have to do the json separately
     }
     //this stream deals with the sprite.png file/ sprite.less
     if(configure.iconfont)
@@ -259,7 +268,7 @@ gulp.task('icon', () => {
          , configure.iconfont);
          
         //iconfontcss fontname has to be the same as the one we pass to iconfont
-        var stream3 = gulp.src(configure.iconfont.src, {cwd: configure.root})
+        var stream4 = gulp.src(configure.iconfont.src, {cwd: configure.root})
                       .pipe(iconfontHtml({
                         fontName: configure.iconfont.fontName,
                         targetPath: configure.iconfont.htmlPath
@@ -277,7 +286,7 @@ gulp.task('icon', () => {
                         formats: configure.iconfont.formats, 
                       }));
                       //.pipe(gulp.dest('src/theme/fonts/', {cwd: configure.root}));
-        merged.add(stream3);
+        merged.add(stream4);
     }
     //now filter and combine the less files
     const lessf = gulpfilter(['**/*.less', '**/*.scss', '**/*.css'], {restore: true});
@@ -296,8 +305,27 @@ gulp.task('icon', () => {
           .pipe(fontsf.restore)
           .pipe(htmlf)
           .pipe(replace('CustomIconFont.css' ,'img.less'))
-          .pipe(gulp.dest('src/theme/', {cwd: configure.root}));
+          .pipe(gulp.dest('src/theme/'));
 });
+
+gulp.task('demo', () => {
+       return gulp.src('tpls/**/*.hbs.html', {cwd: configure.root})
+                        .pipe(data(function(file) {
+                             return require('./src/theme/sprite.json');
+                           }))
+                        .pipe(handlebars())
+                        .pipe(rename('demo.html'))
+                        .pipe(gulp.dest('src/theme/', {cwd: configure.root}))
+                        .pipe(concat('src/theme/demototal.html'));
+                        
+
+});
+
+gulp.task('concatHtml', () =>{
+  return gulp.src('src/theme/**/*.html', {cwd:configure.root})
+              .pipe(concat('index.html'))
+              .pipe(gulp.dest('src/theme/'));
+})
 
 
 

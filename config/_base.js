@@ -122,6 +122,17 @@ module.exports = {
                     
 },
 
+    iconfont: {
+
+    },
+
+    sprite:{
+
+    },
+
+
+  
+
 	//-----------------style----------------
 	// into app.css, (re-compile during `watch`)
 	stylesheet: 'styles/_base.less', 

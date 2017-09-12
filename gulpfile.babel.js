@@ -76,12 +76,13 @@ import rename from 'gulp-rename'
 import spritesmith from 'gulp.spritesmith'
 import iconfont from 'gulp-iconfont'
 import iconfontCss from 'gulp-iconfont-css'
-import iconfontHtml from 'gulp-iconfont-template'
 import gulpfilter from 'gulp-filter'
-//import hbs from 'gulp-hbs'
 import replace from 'gulp-replace'
-import handlebars from 'gulp-compile-handlebars'
-import data from 'gulp-data'
+import runSequence from 'run-sequence'
+import del from 'del'
+import lessImport from 'gulp-less-import'
+import handlebarsWax from 'handlebars-wax'
+import hb from 'gulp-hb'
 
 
 
@@ -229,23 +230,35 @@ gulp.task('tpl', () => {
            .pipe(gulp.dest(configure.output, {cwd: configure.root}));
 }); //end of tpl task
 
+
+
 //textures will be ignored
 gulp.task('icon', () => {
     if ((!configure.sprite) && (!configure.iconfont)) return; 
     var merged = mergeStream();
     const registry = [];
+    configure.iconPath = configure.iconPath || 'src/theme/'; //configure.iconPath is the base output path used for sprites and icon fonts. Configs should be in reference to this.
     if(configure.sprite)
     {
-       configure.sprite =  _.extend({src: 'src/icon/**/*.png', targetName: 'sprite', outputPath: 'src/theme/img/', format: 'css'},configure.sprite);
+      //imgPath is the path we want to use inside img.less file to reference sprite.png, in context of where the img.less file is located.
+       configure.sprite =  _.extend({src: 'src/theme/icon/**/*.png', targetName: 'sprite', imgPath: './img/',outputPath: 'img/', format: 'css'},configure.sprite);
        var stream1 = gulp.src(configure.sprite.src, {cwd: configure.root})
                       .pipe(spritesmith({
                          imgName: `${configure.sprite.targetName}.png`,
                          cssName: `${configure.sprite.targetName}.${configure.sprite.format}`,
-                         imgPath: './img/sprite.png' 
+                         imgPath: `${configure.sprite.imgPath}${configure.sprite.targetName}.png`
                   }));
                      // .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}));  //need to combine the less files inside the stream somehow
        merged.add(stream1);
-       const jsonf = gulpfilter('**/*.json');
+        if (configure.iconfont)
+                               {
+                                 configure.iconfont = _.extend(
+                                {fontName: 'CustomIconFont', normalize: true, prependUnicode: true, 
+                                 formats: ['woff2', 'woff', 'ttf'], src: 'src/theme/icon/**/*.svg', 
+                                 fontPath: 'font/', htmlPath: 'sample.html', cssPath: 'icon.less', 
+                                 cssFormat: 'css' }, configure.iconfont); //end extend
+                               }
+       const jsonf = gulpfilter('**/*.json', {restore: true});
        var stream2 = gulp.src(configure.sprite.src, {cwd: configure.root})
                          .pipe(spritesmith({
                             imgName: `${configure.sprite.targetName}.png`,
@@ -253,79 +266,89 @@ gulp.task('icon', () => {
                             cssFormat: 'json_array' 
                          }))
                          .pipe(jsonf)
-                         .pipe(replace("[", '{"sprites" : ['))
-                         .pipe(replace("]", "]}"))
-                         .pipe(gulp.dest('src/theme/', {cwd: configure.root}));
+                         .pipe(gulp.dest(`${configure.iconPath}`, {cwd: configure.root}))
+                         .on('end', () => {
+                               if (configure.iconfont)
+                               {
+                                var stream3= gulp.src(configure.iconfont.src, {cwd: configure.root})
+  
+                                .pipe(iconfontCss({
+                                  fontName: configure.iconfont.fontName,
+                                  path: configure.iconfont.cssFormat,
+                                  targetPath: configure.iconfont.cssPath,
+                                  fontPath: `./${configure.iconfont.fontPath}`
+                                }))
+                                .pipe(iconfont({
+                                  fontName: configure.iconfont.fontName,
+                                  normalize: configure.iconfont.normalize,
+                                  prependUnicode: configure.iconfont.prependUnicode,
+                                  formats: configure.iconfont.formats, 
+                                }))
+                                .on('glyphs', function(glyphs){
+                                    var hbstream = hb()
+                                              .data({iconfonts: glyphs})
+                                              .data(`${configure.iconPath}${configure.sprite.targetName}.json`);
+                                    return gulp.src('tpls/**/*.hbs.html')
+                                                .pipe(hbstream)
+                                                .pipe(rename('demo.html'))
+                                                .pipe(gulp.dest(configure.iconPath))
+                                                .on('end', () => {
+                                                     return del([
+                                                       `${configure.iconPath}${configure.sprite.targetName}.json`
+                                                     ]);
+                                                 });
+
+                                })
+                             merged.add(stream3);
+                           }
+                         }); //end
 
        merged.add(stream2);
        //have to do the json separately
     }
     //this stream deals with the sprite.png file/ sprite.less
-    if(configure.iconfont)
-    {
-        configure.iconfont = _.extend(
-            {fontName: 'CustomIconFont', normalize: true, prependUnicode: true, formats: ['woff2', 'woff', 'ttf'], src: 'src/icon/**/*.svg', fontPath: './fonts/', htmlPath: 'index.html', cssPath: '../img.less', cssFormat: 'css' }
-         , configure.iconfont);
-         
-        //iconfontcss fontname has to be the same as the one we pass to iconfont
-        var stream4 = gulp.src(configure.iconfont.src, {cwd: configure.root})
-                      .pipe(iconfontHtml({
-                        fontName: configure.iconfont.fontName,
-                        targetPath: configure.iconfont.htmlPath
-                      }))
-                      .pipe(iconfontCss({
-                        fontName: configure.iconfont.fontName,
-                        path: configure.iconfont.cssFormat,
-                        targetPath: configure.iconfont.cssPath,
-                        fontPath: configure.iconfont.fontPath
-                      }))
-                      .pipe(iconfont({
-                        fontName: configure.iconfont.fontName,
-                        normalize: configure.iconfont.normalize,
-                        prependUnicode: configure.iconfont.prependUnicode,
-                        formats: configure.iconfont.formats, 
-                      }));
-                      //.pipe(gulp.dest('src/theme/fonts/', {cwd: configure.root}));
-        merged.add(stream4);
-    }
+  
     //now filter and combine the less files
-    const lessf = gulpfilter(['**/*.less', '**/*.scss', '**/*.css'], {restore: true});
+    const lessf = gulpfilter(['**/*.less', '**/*.sass', '**/*.css'], {restore: true});
     const spritef = gulpfilter('**/*.png', {restore: true});
-    const htmlf = gulpfilter('**/*.html', {restore: true});
     const fontsf =  gulpfilter(['**/*.woff2', '**/*.woff', '**/*.ttf', '**/*.eot', '**/*.svg'], {restore: true}); //all the possible output options of iconfont
     return merged.pipe(lessf)
-          .pipe(concat('img.less'))
-          .pipe(gulp.dest('src/theme/', {cwd: configure.root}))
+          .pipe(concat(configure.iconfont.cssPath))
+          .pipe(gulp.dest(configure.iconPath, {cwd: configure.root}))
           .pipe(lessf.restore)
           .pipe(spritef)
-          .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}))
+          .pipe(gulp.dest(`${configure.iconPath}${configure.sprite.outputPath}`, {cwd: configure.root}))
           .pipe(spritef.restore)
           .pipe(fontsf)
-          .pipe(gulp.dest('src/theme/fonts/', {cwd: configure.root}))
-          .pipe(fontsf.restore)
-          .pipe(htmlf)
-          .pipe(replace('CustomIconFont.css' ,'img.less'))
-          .pipe(gulp.dest('src/theme/'));
+          .pipe(gulp.dest(`${configure.iconPath}${configure.iconfont.fontPath}`, {cwd: configure.root}))
 });
 
-gulp.task('demo', () => {
-       return gulp.src('tpls/**/*.hbs.html', {cwd: configure.root})
-                        .pipe(data(function(file) {
-                             return require('./src/theme/sprite.json');
-                           }))
-                        .pipe(handlebars())
-                        .pipe(rename('demo.html'))
-                        .pipe(gulp.dest('src/theme/', {cwd: configure.root}))
-                        .pipe(concat('src/theme/demototal.html'));
-                        
+
+//compiles LESS > CSS, first generate the main.less file
+gulp.task('importLess', () =>{
+     //no main.less file or nothing the user wants us to auto import
+     //if(!configure.stylesheet) return;
+     //auto import the icons less file
+    return gulp.src(['src/theme/img.less', 'src/view/**/*.less', configure.stylesheet], {cwd: configure.root})
+         .pipe(lessImport('main.less'))
+         .pipe(concat(configure.stylesheet))
+         .pipe(gulp.dest(configure.output, {cwd: configure.root}));
+
+         /*.on('end', () => {
+              return gulp.src([configure.stylesheet, 'src/theme/main.less'], {cwd: configure.root})
+                         .pipe(concat(configure.stylesheet))
+                         .pipe(gulp.dest(configure.output, {cwd: configure.root}))
+                         .on('end', () => {
+                            return del([
+                              'src/theme/main.less'
+                              ]);
+                         });
+         })*/
+          
+
+
 
 });
-
-gulp.task('concatHtml', () =>{
-  return gulp.src('src/theme/**/*.html', {cwd:configure.root})
-              .pipe(concat('index.html'))
-              .pipe(gulp.dest('src/theme/'));
-})
 
 
 

@@ -81,12 +81,13 @@ import replace from 'gulp-replace'
 import runSequence from 'run-sequence'
 import del from 'del'
 import lessImport from 'gulp-less-import'
-import handlebarsWax from 'handlebars-wax'
 import hb from 'gulp-hb'
 import insert from 'gulp-insert'
 import handlebars from 'handlebars'
 import fs from 'fs'
 import autoprefixer from 'less-plugin-autoprefix'
+import webpackS from 'webpack-stream'
+import webpack from 'webpack'
 
 
 
@@ -147,7 +148,7 @@ gulp.task('default', () => console.log('Default task called'));
 //making reusable pipeline for bundling, transpiling, minifying js
 
 //SWITCH TO WEBPACK
-const processJS = {
+/*const processJS = {
     bundle: lazypipe()
             .pipe(function () {
                 //lazypipe calls the function and passes in no args. It instantiates a new gulp-if pipe and returns it to lazypipe
@@ -174,10 +175,10 @@ const processJS = {
 
             
 
-}
+}*/
 
 //default is just main.js as entry -> bundle.js assume is es6
-gulp.task('js', ['tpl'], () => {
+/*gulp.task('js', ['tpl'], () => {
      if(!configure.javascript) return; //nothing to do not in the config
      if(_.isEmpty(configure.javascript)) // user wants the default behavior empty js config object. using lodash function isEmpty()
      {
@@ -210,7 +211,76 @@ gulp.task('js', ['tpl'], () => {
      }); //ends forIn loop
 
      return merged.pipe(gsize({title: 'alljs', showFiles: true}));
+});*/
+
+//default is just main.js as entry -> bundle.js assume is es6
+gulp.task('js', ['tpl'], () => {
+     if(!configure.javascript) return; //nothing to do not in the config
+     //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
+     var merged = mergeStream();
+     //configure.javascript default behavior set in config due to merge already
+     _.forIn(configure.javascript, function(value,target){
+        //v is the string/array of paths. k is the javascript target file
+        //if the target object exists and is not false. But this current target is filtered out just return to move on to next target
+        if(configure.targets && !configure.targets[target]) return;
+        //should we have a compile only option??
+        //if(configure.compileonly && _.isArray(value)) return; //should compile only meaning only do the non array values
+        merged.add((_.isArray(value) ? 
+                (gulp.src(value, {cwd: configure.root})
+                     .pipe(gsize({title: `${target}.js:concat`, showFiles: true}))
+                     .pipe(processJS.concat()))
+        :
+                (gulp.src(value, {cwd: configure.root})
+                    .pipe(processJS.bundle()))
+                    )//ends ternary
+             .pipe(rename({basename: target, dirname: 'js'})) //everything js related is placed in js folder in output folder.]
+             .pipe(gulp.dest(configure.output, {cwd: configure.root}))
+        ); //ends merge.add
+     }); //ends forIn loop
+
+     return merged.pipe(gsize({title: 'alljs', showFiles: true}));
 });
+
+
+//SWITCH TO WEBPACK
+const processJS = {
+    bundle: lazypipe()
+            .pipe(function () {
+                //lazypipe calls the function and passes in no args. It instantiates a new gulp-if pipe and returns it to lazypipe
+               return gulpif(configure.javascript.lint,  jslint());
+            })
+            .pipe(webpackS,{
+            	cache: true,
+            	module:{
+            		loaders: [
+            		  {
+            		  	test: /\.js$/,
+            		  	loader: 'babel-loader',
+            		  	exclude: /node_modules/, //excludes transpiling these 3rd party libs
+            		  	query:{ //could add plugins: ['transform-runtime'] to extract babel's runtime helpers
+            		  		cacheDirectory: true,
+            		  		presets: ['es2015'] //can add stage0, react, etc here as well
+            		  	}
+            		  }
+            		]
+            	},
+            	plugins:[
+            	    new webpack.optimize.UglifyJsPlugin()
+            	]
+
+            }),
+    concat: lazypipe()
+    //initialize a new gulp sourcemap. Will be a new property added to vinyl file objects
+            .pipe(sourcemaps.init)
+            .pipe(concat, 'tmp.js', {newLine: ';'})
+            .pipe(sourcemaps.write) //does not actually write the sourcemap, just tells gulp to materialize them into a physical file when you call gulp.dest
+          }
+
+            
+
+
+
+
 
 gulp.task('tpl', () => {
     //if the user does not want to combine templates than we end this task
@@ -325,7 +395,7 @@ gulp.task('icon', () => {
 
 gulp.task('less', () => {
     //configure.stylesheet is main.less or some .less file that is this themes css entrypoint
-    if(!configure.stylesheet) return;
+    if(!configure.stylesheet) return; //basically if they set configure.stylesheet as false than we skip it, otherwise we look within the merged config and go to default if not overridden
     var autoprefix = new autoprefixer({browsers: ['last 2 versions']});
     gulp.src('src/view/main.less')
          .pipe(insert.wrap('@import "src/theme/icon.less";\n', '@import "src/view/**/*.less";'))
@@ -333,7 +403,7 @@ gulp.task('less', () => {
          	   paths: [
          	      configure.root,
          	      path.join(configure.root, 'node_modules'),
-         	      path.join(configure.root, 'bower_components')
+         	      path.join(configure.root, 'bower_components')   //basefolder to search for imports from ex: @import bootstrap/bootstrap.js inside of less 
          	   ],
          	   plugins: [autoprefix, require('less-plugin-glob')]
          }))
@@ -342,7 +412,28 @@ gulp.task('less', () => {
 
 });
 
-//gulp.task('sass')
+
+gulp.task('clean', () => {
+    //del.sync() returns an array of deleted paths while del() returns a promise for an array of deleted paths.
+    //force allows the deleting of current working directory and outside
+    var deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
+    console.log('Number of files deleted:', deletedFiles.length);
+    //formatting
+	  if(deletedFiles.length) deletedFiles.push('');// add an empty line.
+	  console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
+
+});
+
+gulp.task('assets', () => {
+	if(!configure.assets) return;
+	
+})
+
+/*gulp.task('sass', () => {
+	if(!configure.stylesheet) return;
+	gulp.src('src/view/main.sass')*/
+	  //  .pipe(insert.wrap('@import "src/theme/icon.sass"\n', '@import "src/view/**/*.sass";'))
+//})
 
 
 //===

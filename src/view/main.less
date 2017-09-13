@@ -1,0 +1,31 @@
+ /* Theme Base. Bootstrap 3.1.+ using Bootswatch Cosmo
+ *
+ * Start a new theme:
+ * ------------------
+ * 1. run `node tools/themeprep/run.js <your new theme name>`
+ * 2. start tweaking the new theme
+ * 3. re-run step.1 whenever you want to update /fonts or have added new icons into /img folders
+ *
+ * @author Tim Lauv
+ * @created 2014.03.09
+ * @updated 2014.07.22
+ * @updated 2015.08.12
+ * @updated 2016.12.30
+ */
+
+@import "bootstrap/less/bootstrap.less";
+
+//Cordova app fix
+* {
+	-webkit-touch-callout:none; //disable link menu when using cordova
+	user-select:none; //disable content select/copy in cordova
+}
+
+input, select, textarea {
+	user-select:text !important;
+}
+
+//==========================================================================================================
+//Put your context specific styles below this line:
+//==========================================================================================================
+//global variables and fonts

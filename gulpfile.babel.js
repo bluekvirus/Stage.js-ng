@@ -83,6 +83,10 @@ import del from 'del'
 import lessImport from 'gulp-less-import'
 import handlebarsWax from 'handlebars-wax'
 import hb from 'gulp-hb'
+import insert from 'gulp-insert'
+import handlebars from 'handlebars'
+import fs from 'fs'
+import autoprefixer from 'less-plugin-autoprefix'
 
 
 
@@ -141,6 +145,8 @@ console.log('Using configure:', argv.C.yellow);
 gulp.task('default', () => console.log('Default task called'));
 
 //making reusable pipeline for bundling, transpiling, minifying js
+
+//SWITCH TO WEBPACK
 const processJS = {
     bundle: lazypipe()
             .pipe(function () {
@@ -250,14 +256,6 @@ gulp.task('icon', () => {
                   }));
                      // .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}));  //need to combine the less files inside the stream somehow
        merged.add(stream1);
-        if (configure.iconfont)
-                               {
-                                 configure.iconfont = _.extend(
-                                {fontName: 'CustomIconFont', normalize: true, prependUnicode: true, 
-                                 formats: ['woff2', 'woff', 'ttf'], src: 'src/theme/icon/**/*.svg', 
-                                 fontPath: 'font/', htmlPath: 'sample.html', cssPath: 'icon.less', 
-                                 cssFormat: 'css' }, configure.iconfont); //end extend
-                               }
        const jsonf = gulpfilter('**/*.json', {restore: true});
        var stream2 = gulp.src(configure.sprite.src, {cwd: configure.root})
                          .pipe(spritesmith({
@@ -266,11 +264,19 @@ gulp.task('icon', () => {
                             cssFormat: 'json_array' 
                          }))
                          .pipe(jsonf)
-                         .pipe(gulp.dest(`${configure.iconPath}`, {cwd: configure.root}))
-                         .on('end', () => {
-                               if (configure.iconfont)
-                               {
-                                var stream3= gulp.src(configure.iconfont.src, {cwd: configure.root})
+                         .pipe(gulp.dest(`${configure.iconPath}`, {cwd: configure.root}));
+
+       merged.add(stream2);
+       //have to do the json separately
+    }
+
+     if (configure.iconfont)
+   {
+     configure.iconfont = _.extend({fontName: 'CustomIconFont', normalize: true, prependUnicode: true, 
+                           formats: ['woff2', 'woff', 'ttf'], src: 'src/theme/icon/**/*.svg', 
+                           fontPath: 'font/', htmlPath: 'sample.html', cssPath: 'icon.less', 
+                           cssFormat: 'css' }, configure.iconfont); //end extend
+     var stream3= gulp.src(configure.iconfont.src, {cwd: configure.root})
   
                                 .pipe(iconfontCss({
                                   fontName: configure.iconfont.fontName,
@@ -285,29 +291,22 @@ gulp.task('icon', () => {
                                   formats: configure.iconfont.formats, 
                                 }))
                                 .on('glyphs', function(glyphs){
-                                    var hbstream = hb()
-                                              .data({iconfonts: glyphs})
-                                              .data(`${configure.iconPath}${configure.sprite.targetName}.json`);
-                                    return gulp.src('tpls/**/*.hbs.html')
-                                                .pipe(hbstream)
-                                                .pipe(rename('demo.html'))
-                                                .pipe(gulp.dest(configure.iconPath))
-                                                .on('end', () => {
-                                                     return del([
-                                                       `${configure.iconPath}${configure.sprite.targetName}.json`
-                                                     ]);
-                                                 });
+                                    fs.writeFileSync('src/theme/iconfonts.json',JSON.stringify(glyphs));
+                                });
+      merged.add(stream3);
+   }
 
-                                })
-                             merged.add(stream3);
-                           }
-                         }); //end
-
-       merged.add(stream2);
-       //have to do the json separately
-    }
+   merged.on('end', () => {
+       const data = {
+       	sprite: require('./src/theme/sprite.json'),
+       	iconfonts: require('./src/theme/iconfonts.json')
+       }
+       fs.writeFileSync('./src/theme/demo.html', handlebars.compile(fs.readFileSync('./tpls/template.hbs.html', 'utf-8'))(data));
+  
+   });
     //this stream deals with the sprite.png file/ sprite.less
   
+
     //now filter and combine the less files
     const lessf = gulpfilter(['**/*.less', '**/*.sass', '**/*.css'], {restore: true});
     const spritef = gulpfilter('**/*.png', {restore: true});
@@ -324,32 +323,26 @@ gulp.task('icon', () => {
 });
 
 
-//compiles LESS > CSS, first generate the main.less file
-gulp.task('importLess', () =>{
-     //no main.less file or nothing the user wants us to auto import
-     //if(!configure.stylesheet) return;
-     //auto import the icons less file
-    return gulp.src(['src/theme/img.less', 'src/view/**/*.less', configure.stylesheet], {cwd: configure.root})
-         .pipe(lessImport('main.less'))
-         .pipe(concat(configure.stylesheet))
-         .pipe(gulp.dest(configure.output, {cwd: configure.root}));
-
-         /*.on('end', () => {
-              return gulp.src([configure.stylesheet, 'src/theme/main.less'], {cwd: configure.root})
-                         .pipe(concat(configure.stylesheet))
-                         .pipe(gulp.dest(configure.output, {cwd: configure.root}))
-                         .on('end', () => {
-                            return del([
-                              'src/theme/main.less'
-                              ]);
-                         });
-         })*/
-          
-
-
+gulp.task('less', () => {
+    //configure.stylesheet is main.less or some .less file that is this themes css entrypoint
+    if(!configure.stylesheet) return;
+    var autoprefix = new autoprefixer({browsers: ['last 2 versions']});
+    gulp.src('src/view/main.less')
+         .pipe(insert.wrap('@import "src/theme/icon.less";\n', '@import "src/view/**/*.less";'))
+         .pipe(less({
+         	   paths: [
+         	      configure.root,
+         	      path.join(configure.root, 'node_modules'),
+         	      path.join(configure.root, 'bower_components')
+         	   ],
+         	   plugins: [autoprefix, require('less-plugin-glob')]
+         }))
+         .pipe(gulp.dest('public/'));
+        //.pipe(insert.append('@import "vars/**/*.less'))
 
 });
 
+//gulp.task('sass')
 
 
 //===

@@ -69,25 +69,25 @@ import babelify from 'babelify';
 import uglify from 'gulp-uglify';
 import gulpif from 'gulp-if';
 import lazypipe from 'lazypipe';
-import concat from 'gulp-concat'
-import sourcemaps from 'gulp-sourcemaps'
-import mergeStream from 'merge-stream' //more popular than gulp-merge or merge2
-import rename from 'gulp-rename'
-import spritesmith from 'gulp.spritesmith'
-import iconfont from 'gulp-iconfont'
-import iconfontCss from 'gulp-iconfont-css'
-import gulpfilter from 'gulp-filter'
-import replace from 'gulp-replace'
-import runSequence from 'run-sequence'
-import del from 'del'
-import lessImport from 'gulp-less-import'
-import hb from 'gulp-hb'
-import insert from 'gulp-insert'
-import handlebars from 'handlebars'
-import fs from 'fs'
-import autoprefixer from 'less-plugin-autoprefix'
-import webpackS from 'webpack-stream'
-import webpack from 'webpack'
+import concat from 'gulp-concat';
+import sourcemaps from 'gulp-sourcemaps';
+import mergeStream from 'merge-stream'; //more popular than gulp-merge or merge2
+import rename from 'gulp-rename';
+import spritesmith from 'gulp.spritesmith';
+import iconfont from 'gulp-iconfont';
+import iconfontCss from 'gulp-iconfont-css';
+import gulpfilter from 'gulp-filter';
+import replace from 'gulp-replace';
+import runSequence from 'run-sequence';
+import del from 'del';
+import hb from 'gulp-hb';
+import insert from 'gulp-insert';
+import handlebars from 'handlebars';
+import fs from 'fs';
+import autoprefixer from 'less-plugin-autoprefix';
+import webpackS from 'webpack-stream';
+import webpack from 'webpack';
+import deepmerge from 'deepmerge';
 
 
 
@@ -96,7 +96,7 @@ var argv = require('yargs').options({
     'C': {
         alias: 'config',
         describe: 'Specify a customized configure file to override base ones.',
-        default: '_base'
+        default: 'default'
     },
     'P': {
         alias: 'production',
@@ -122,7 +122,9 @@ if(argv.h || argv.help) {
 }
 // load the targeted configure.
 //import configure from `${__dirname}/config/${argv.C}`
-const configure = require(path.join(__dirname, 'config', argv.C));
+
+const configure = deepmerge(require(path.join(__dirname, 'config', 'default')),require(path.join(__dirname, 'config', argv.C)));
+console.log(configure);
 configure.root = configure.root || __dirname;
 //process the possible javascript targets passed through command line. If none then configure.targets = false. otherwise an object
 configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
@@ -131,13 +133,6 @@ configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
 }, {});
 configure.targets = _.isEmpty(configure.targets) ? false : configure.targets;
 console.log('Using configure:', argv.C.yellow);
-
-
-
-
-
-
-
 
 
 
@@ -218,6 +213,7 @@ gulp.task('js', ['tpl'], () => {
      if(!configure.javascript) return; //nothing to do not in the config
      //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
      var merged = mergeStream();
+     configure.plugins.webpackStream = _.extend({plugins: [new webpack.optimize.UglifyJsPlugin()]}, configure.plugins.webpackStream);
      //configure.javascript default behavior set in config due to merge already
      _.forIn(configure.javascript, function(value,target){
         //v is the string/array of paths. k is the javascript target file
@@ -249,26 +245,7 @@ const processJS = {
                 //lazypipe calls the function and passes in no args. It instantiates a new gulp-if pipe and returns it to lazypipe
                return gulpif(configure.javascript.lint,  jslint());
             })
-            .pipe(webpackS,{
-            	cache: true,
-            	module:{
-            		loaders: [
-            		  {
-            		  	test: /\.js$/,
-            		  	loader: 'babel-loader',
-            		  	exclude: /node_modules/, //excludes transpiling these 3rd party libs
-            		  	query:{ //could add plugins: ['transform-runtime'] to extract babel's runtime helpers
-            		  		cacheDirectory: true,
-            		  		presets: ['es2015'] //can add stage0, react, etc here as well
-            		  	}
-            		  }
-            		]
-            	},
-            	plugins:[
-            	    new webpack.optimize.UglifyJsPlugin()
-            	]
-
-            }),
+            .pipe(webpackS, configure.plugins.webpackStream),
     concat: lazypipe()
     //initialize a new gulp sourcemap. Will be a new property added to vinyl file objects
             .pipe(sourcemaps.init)
@@ -310,61 +287,45 @@ gulp.task('tpl', () => {
 
 //textures will be ignored
 gulp.task('icon', () => {
-    if ((!configure.sprite) && (!configure.iconfont)) return; 
-    var merged = mergeStream();
+    if (!configure.icon) return; 
+    const merged = mergeStream();
     const registry = [];
-    configure.iconPath = configure.iconPath || 'src/theme/'; //configure.iconPath is the base output path used for sprites and icon fonts. Configs should be in reference to this.
-    if(configure.sprite)
-    {
-      //imgPath is the path we want to use inside img.less file to reference sprite.png, in context of where the img.less file is located.
-       configure.sprite =  _.extend({src: 'src/theme/icon/**/*.png', targetName: 'sprite', imgPath: './img/',outputPath: 'img/', format: 'css'},configure.sprite);
-       var stream1 = gulp.src(configure.sprite.src, {cwd: configure.root})
+    var stream1 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                       .pipe(spritesmith({
-                         imgName: `${configure.sprite.targetName}.png`,
-                         cssName: `${configure.sprite.targetName}.${configure.sprite.format}`,
-                         imgPath: `${configure.sprite.imgPath}${configure.sprite.targetName}.png`
+                         imgName: configure.icon.spriteName,
+                         cssName: configure.icon.cssName,
+                         imgPath: configure.icon.imgDir
                   }));
                      // .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}));  //need to combine the less files inside the stream somehow
        merged.add(stream1);
        const jsonf = gulpfilter('**/*.json', {restore: true});
-       var stream2 = gulp.src(configure.sprite.src, {cwd: configure.root})
+       var stream2 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                          .pipe(spritesmith({
-                            imgName: `${configure.sprite.targetName}.png`,
-                            cssName: `${configure.sprite.targetName}.json`,
+                            imgName: configure.icon.spriteName,
+                            cssName: configure.icon.cssName,
                             cssFormat: 'json_array' 
                          }))
                          .pipe(jsonf)
-                         .pipe(gulp.dest(`${configure.iconPath}`, {cwd: configure.root}));
+                         .pipe(gulp.dest(configure.icon.src, {cwd: configure.root}));
 
        merged.add(stream2);
-       //have to do the json separately
-    }
-
-     if (configure.iconfont)
-   {
-     configure.iconfont = _.extend({fontName: 'CustomIconFont', normalize: true, prependUnicode: true, 
-                           formats: ['woff2', 'woff', 'ttf'], src: 'src/theme/icon/**/*.svg', 
-                           fontPath: 'font/', htmlPath: 'sample.html', cssPath: 'icon.less', 
-                           cssFormat: 'css' }, configure.iconfont); //end extend
-     var stream3= gulp.src(configure.iconfont.src, {cwd: configure.root})
-  
+    var stream3 = gulp.src(`${configure.icon.src}/**/*.svg`, {cwd: configure.root})
                                 .pipe(iconfontCss({
-                                  fontName: configure.iconfont.fontName,
-                                  path: configure.iconfont.cssFormat,
-                                  targetPath: configure.iconfont.cssPath,
-                                  fontPath: `./${configure.iconfont.fontPath}`
+                                  fontName: configure.icon.fontName,
+                                  path: configure.icon.cssFormat,
+                                  targetPath: configure.icon.cssName,
+                                  fontPath: configure.icon.fontsDir
                                 }))
                                 .pipe(iconfont({
-                                  fontName: configure.iconfont.fontName,
-                                  normalize: configure.iconfont.normalize,
-                                  prependUnicode: configure.iconfont.prependUnicode,
-                                  formats: configure.iconfont.formats, 
+                                  fontName: configure.icon.fontName,
+                                  normalize: true,
+                                  prependUnicode: true,
+                                  formats: configure.icon.fontFormats
                                 }))
                                 .on('glyphs', function(glyphs){
                                     fs.writeFileSync('src/theme/iconfonts.json',JSON.stringify(glyphs));
                                 });
       merged.add(stream3);
-   }
 
    merged.on('end', () => {
        const data = {
@@ -416,7 +377,7 @@ gulp.task('less', () => {
 gulp.task('clean', () => {
     //del.sync() returns an array of deleted paths while del() returns a promise for an array of deleted paths.
     //force allows the deleting of current working directory and outside
-    var deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
+    const deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
     console.log('Number of files deleted:', deletedFiles.length);
     //formatting
 	  if(deletedFiles.length) deletedFiles.push('');// add an empty line.
@@ -424,10 +385,31 @@ gulp.task('clean', () => {
 
 });
 
+
+//assets is an array of strings and objects.
 gulp.task('assets', () => {
 	if(!configure.assets) return;
-	
-})
+  const globCopy = [];
+  const renameMap = {};
+  _.each(configure.assets, (curr) => {
+     if(_.isString(curr)) globCopy.push(curr);
+     else _.extend(renameMap, curr);
+  });
+  const merged = mergeStream();
+  var globStream = gulp.src(globCopy, {cwd: configure.root})
+                       .pipe(gulp.dest(configure.output, {cwd: configure.root}))
+  merged.add(globStream);
+  _.forIn(renameMap, (newDir, srcPath) => {
+      let renameStream = gulp.src(srcPath, {cwd: configure.root})
+                             .pipe(rename((curr) => {
+                             	   if(_.endsWith(srcPath, '/**/*') || _.endsWith(srcPath, '/*')) curr.dirname = newDir; // test/people.less becomes newdir/people.less
+                             	   else curr.dirname = path.join(newDir, curr.dirname); // test/* moves the whole directory into the new one so newdir/test/people.less etc - basically copies the whole folder
+                             }))
+                             .pipe(gulp.dest(configure.output, {cwd: configure.root}));
+      merged.add(renameStream);
+     });
+  return merged.pipe(gsize({title: 'copies assets', showFiles: true}));
+  });
 
 /*gulp.task('sass', () => {
 	if(!configure.stylesheet) return;

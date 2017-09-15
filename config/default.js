@@ -62,7 +62,7 @@ module.exports = {
 	plugins: {
 
 		autoprefixer: {},
-		'minify-css': {
+		cleanCSS: {
 			keepSpecialComments: '*' //special comment only (e.g license)
 		}, //use clean-css internally 
 
@@ -71,7 +71,7 @@ module.exports = {
 			 //by plugin default special comment only (e.g license) are kept
 		},
 		
-		'minify-html': {
+		htmlMin: {
 			empty: true,
 			conditionals: true, //remove comments but not the ie ones.
 			spare: true
@@ -86,23 +86,19 @@ module.exports = {
                //allows aggregation of other changes during this time period into one rebuilt
             },
             module:{
-            	loaders: [
-            	{
-            		test: /\.js$/,
-            		loader: 'import-glob'
-            	},
+            	rules: [
                 {
         		  	test: /\.js$/,
         		  	loader: 'babel-loader',
         		  	exclude: /node_modules/, //excludes transpiling these 3rd party libs
         		  	query:{ //could add plugins: ['transform-runtime'] to extract babel's runtime helpers
         		  		cacheDirectory: true,
-        		  		//presets: ['es2015'] //can add stage0, react, etc here as well
-            	}
-            		  }]
-            	}
+        		  		presets: ['es2015', 'stage0'] //can add stage0, react, etc here as well
+            	    }
+                }]//end of rules
+             }
 
-            },
+         },
 
 		gzip: {}
 

@@ -88,7 +88,8 @@ import autoprefixer from 'less-plugin-autoprefix';
 import webpackS from 'webpack-stream';
 import webpack from 'webpack';
 import deepmerge from 'deepmerge';
-
+import htmlmin from 'gulp-htmlmin';
+import cleanCSS from 'gulp-clean-css';
 
 
 //configure commandline options, grabbed from the original stagesnextgen
@@ -124,7 +125,7 @@ if(argv.h || argv.help) {
 //import configure from `${__dirname}/config/${argv.C}`
 
 const configure = deepmerge(require(path.join(__dirname, 'config', 'default')),require(path.join(__dirname, 'config', argv.C)));
-console.log(configure);
+//console.log(configure);
 configure.root = configure.root || __dirname;
 //process the possible javascript targets passed through command line. If none then configure.targets = false. otherwise an object
 configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
@@ -213,7 +214,7 @@ gulp.task('js', ['tpl'], () => {
      if(!configure.javascript) return; //nothing to do not in the config
      //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
      var merged = mergeStream();
-     configure.plugins.webpackStream = _.extend({plugins: [new webpack.optimize.UglifyJsPlugin()]}, configure.plugins.webpackStream);
+     //configure.plugins.webpackStream = _.extend({plugins: [new webpack.optimize.UglifyJsPlugin()]}, configure.plugins.webpackStream);
      //configure.javascript default behavior set in config due to merge already
      _.forIn(configure.javascript, function(value,target){
         //v is the string/array of paths. k is the javascript target file
@@ -358,7 +359,7 @@ gulp.task('less', () => {
     //configure.stylesheet is main.less or some .less file that is this themes css entrypoint
     if(!configure.stylesheet) return; //basically if they set configure.stylesheet as false than we skip it, otherwise we look within the merged config and go to default if not overridden
     var autoprefix = new autoprefixer({browsers: ['last 2 versions']});
-    gulp.src('src/view/main.less')
+    gulp.src(configure.stylesheet)
          .pipe(insert.wrap('@import "src/theme/icon.less";\n', '@import "src/view/**/*.less";'))
          .pipe(less({
          	   paths: [
@@ -368,7 +369,7 @@ gulp.task('less', () => {
          	   ],
          	   plugins: [autoprefix, require('less-plugin-glob')]
          }))
-         .pipe(gulp.dest('public/'));
+         .pipe(gulp.dest(configure.output));
         //.pipe(insert.append('@import "vars/**/*.less'))
 
 });
@@ -385,6 +386,25 @@ gulp.task('clean', () => {
 
 });
 
+/*gulp.task('min:html', () => {
+    return gulp.src(configure.templates.src, {cwd: configure.root})
+               .pipe(htmlmin({collapseWhitespace: true}))
+               .pipe(gulp.dest(configure.output));
+});*/ //index.html only probably
+
+
+gulp.task('min:css', () => {
+    return gulp.src(`${configure.output}/**/*.css`)
+               .pipe(cleanCSS(configure.plugins.cleanCSS))
+               .pipe(gulp.dest(configure.output));
+});
+
+//use webpack plugin or use this and pump for error messages?
+gulp.task('min:js', () => {
+    return gulp.src(`${configure.output}/**/*.js`)
+               .pipe(uglify())
+               .pipe(gulp.dest(configure.output));
+});
 
 //assets is an array of strings and objects.
 gulp.task('assets', () => {
@@ -410,6 +430,8 @@ gulp.task('assets', () => {
      });
   return merged.pipe(gsize({title: 'copies assets', showFiles: true}));
   });
+
+
 
 /*gulp.task('sass', () => {
 	if(!configure.stylesheet) return;

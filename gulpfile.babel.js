@@ -210,7 +210,7 @@ gulp.task('default', () => console.log('Default task called'));
 });*/
 
 //default is just main.js as entry -> bundle.js assume is es6
-gulp.task('js', ['tpl'], () => {
+gulp.task('js', () => {
      if(!configure.javascript) return; //nothing to do not in the config
      //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
      var merged = mergeStream();
@@ -291,31 +291,33 @@ gulp.task('icon', () => {
     if (!configure.icon) return; 
     const merged = mergeStream();
     const registry = [];
+    //these vars are used to make sure we grab correct portions from generalized config and put them into the right options
     var stream1 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                       .pipe(spritesmith({
-                         imgName: configure.icon.spriteName,
-                         cssName: configure.icon.cssName,
-                         imgPath: configure.icon.imgDir
+                         imgName: path.basename(configure.icon.spritePath),
+                         cssName: path.basename(configure.icon.spritePath, '.png') + '.json',
+                         cssFormat: 'css',
+                         imgPath: `${configure.root}/${configure.icon.spritePath}` //used inside the css file
                   }));
                      // .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}));  //need to combine the less files inside the stream somehow
        merged.add(stream1);
        const jsonf = gulpfilter('**/*.json', {restore: true});
        var stream2 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                          .pipe(spritesmith({
-                            imgName: configure.icon.spriteName,
-                            cssName: configure.icon.cssName,
+                            imgName: path.basename(configure.icon.spritePath),
+                            cssName: 'sprite.json',
                             cssFormat: 'json_array' 
                          }))
                          .pipe(jsonf)
-                         .pipe(gulp.dest(configure.icon.src, {cwd: configure.root}));
+                         .pipe(gulp.dest(path.dirname(configure.icon.spritePath), {cwd: configure.root}));
 
        merged.add(stream2);
     var stream3 = gulp.src(`${configure.icon.src}/**/*.svg`, {cwd: configure.root})
                                 .pipe(iconfontCss({
                                   fontName: configure.icon.fontName,
-                                  path: configure.icon.cssFormat,
-                                  targetPath: configure.icon.cssName,
-                                  fontPath: configure.icon.fontsDir
+                                  path: 'css',
+                                  targetPath: path.basename(configure.icon.cssPath),
+                                  fontPath: `${configure.root}/${configure.icon.fontDir}`
                                 }))
                                 .pipe(iconfont({
                                   fontName: configure.icon.fontName,
@@ -324,16 +326,31 @@ gulp.task('icon', () => {
                                   formats: configure.icon.fontFormats
                                 }))
                                 .on('glyphs', function(glyphs){
-                                    fs.writeFileSync('src/theme/iconfonts.json',JSON.stringify(glyphs));
+                                	//this function will create directories if they don't exist, otherwise writeFileSync will throw error
+                                	function mkdirp(filepath) {
+                                       var dirname = path.dirname(filepath);
+
+                                     if (!fs.existsSync(dirname)) {
+                                         mkdirp(dirname);
+                                    }
+
+                                    fs.mkdirSync(filepath);
+                                    }
+                                    mkdirp(`${configure.root}/${path.dirname(configure.icon.spritePath)}`);
+                                    fs.writeFileSync(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../iconfonts.json`,JSON.stringify(glyphs));
                                 });
       merged.add(stream3);
 
    merged.on('end', () => {
        const data = {
-       	sprite: require('./src/theme/sprite.json'),
-       	iconfonts: require('./src/theme/iconfonts.json')
+       	sprite: require(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../sprite.json`),
+       	iconfonts: require(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../iconfonts.json`)
        }
-       fs.writeFileSync('./src/theme/demo.html', handlebars.compile(fs.readFileSync('./tpls/template.hbs.html', 'utf-8'))(data));
+       fs.writeFileSync(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../demo.html`, handlebars.compile(fs.readFileSync('./tpls/template.hbs.html', 'utf-8'))(data));
+       return gulp.src(`${path.dirname(configure.icon.spritePath)}/../demo.html`, {cwd: configure.root})
+           .pipe(replace("./icon.css", `./${path.basename(configure.icon.cssPath)}`))
+           .pipe(gulp.dest('./', {cwd: configure.root}));
+
   
    });
     //this stream deals with the sprite.png file/ sprite.less
@@ -344,14 +361,14 @@ gulp.task('icon', () => {
     const spritef = gulpfilter('**/*.png', {restore: true});
     const fontsf =  gulpfilter(['**/*.woff2', '**/*.woff', '**/*.ttf', '**/*.eot', '**/*.svg'], {restore: true}); //all the possible output options of iconfont
     return merged.pipe(lessf)
-          .pipe(concat(configure.iconfont.cssPath))
-          .pipe(gulp.dest(configure.iconPath, {cwd: configure.root}))
+          .pipe(concat(path.basename(configure.icon.cssPath)))
+          .pipe(gulp.dest(path.dirname(configure.icon.cssPath), {cwd: configure.root}))
           .pipe(lessf.restore)
           .pipe(spritef)
-          .pipe(gulp.dest(`${configure.iconPath}${configure.sprite.outputPath}`, {cwd: configure.root}))
+          .pipe(gulp.dest(path.dirname(configure.icon.spritePath), {cwd: configure.root}))
           .pipe(spritef.restore)
           .pipe(fontsf)
-          .pipe(gulp.dest(`${configure.iconPath}${configure.iconfont.fontPath}`, {cwd: configure.root}))
+          .pipe(gulp.dest(configure.icon.fontDir, {cwd: configure.root}))
 });
 
 
@@ -396,6 +413,8 @@ gulp.task('clean', () => {
 gulp.task('min:css', () => {
     return gulp.src(`${configure.output}/**/*.css`)
                .pipe(cleanCSS(configure.plugins.cleanCSS))
+               .pipe(rename({suffix: '.min'}))
+               .pipe(gsize({title: minifyCSS, showFiles: true}))
                .pipe(gulp.dest(configure.output));
 });
 
@@ -403,6 +422,8 @@ gulp.task('min:css', () => {
 gulp.task('min:js', () => {
     return gulp.src(`${configure.output}/**/*.js`)
                .pipe(uglify())
+               .pipe(rename({suffix: '.min'}))
+               .pipe(gsize({title: minifyJS, showFiles: true}))
                .pipe(gulp.dest(configure.output));
 });
 

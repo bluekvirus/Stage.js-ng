@@ -9,6 +9,7 @@ module.exports = {
 	javascript: {
 		//app.js
 		app: 'src/entrypoint.js',
+		lib: 'libs/bower_components/**/*.js'
 	},
 
 	//------------templates.json------------
@@ -23,13 +24,11 @@ module.exports = {
     // generate iconfonts, generate sprite, and prepare combined css file for icon
     icon:{
     	src: 'src/theme/icon',
-    	imgDir: 'src/theme/img/', //for output directory based off of baseFolder as well
-    	fontsDir: 'src/theme/font/',  //append ./ to this inside actual less file so it points to write location
-    	cssFormat: 'css', //or less or sass 
+    	fontDir: 'src/theme/font/',  //append ./ to this inside actual less file so it points to write location
     	fontFormats: ['woff2', 'woff', 'ttf'],
-        spriteName: 'src/theme/sprite.png',
+        spritePath: 'src/theme/img/sprite.png',
         fontName: 'CustomIconFont',
-        cssName: 'src/theme/icon.css' 
+        cssPath: 'src/theme/icon.css' 
     },
 
 
@@ -93,7 +92,7 @@ module.exports = {
         		  	exclude: /node_modules/, //excludes transpiling these 3rd party libs
         		  	query:{ //could add plugins: ['transform-runtime'] to extract babel's runtime helpers
         		  		cacheDirectory: true,
-        		  		presets: ['es2015', 'stage0'] //can add stage0, react, etc here as well
+        		  		presets: ['es2015', 'stage-0'] //can add stage0, react, etc here as well
             	    }
                 }]//end of rules
              }

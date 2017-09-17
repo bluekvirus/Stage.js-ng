@@ -56,7 +56,6 @@
 
 import colors from 'colors';
 import gulp from 'gulp';
-import sass from 'gulp-sass';
 import less from 'gulp-less';
 import jslint from 'gulp-jslint';
 import gutil from 'gulp-util';
@@ -64,8 +63,6 @@ import gsize from 'gulp-size';
 import path from 'path';
 import through2 from 'through2';
 import _ from 'lodash';
-import browserify from 'browserify';
-import babelify from 'babelify';
 import uglify from 'gulp-uglify';
 import gulpif from 'gulp-if';
 import lazypipe from 'lazypipe';
@@ -88,8 +85,9 @@ import autoprefixer from 'less-plugin-autoprefix';
 import webpackS from 'webpack-stream';
 import webpack from 'webpack';
 import deepmerge from 'deepmerge';
-import htmlmin from 'gulp-htmlmin';
+import htmlmin from 'html-minifier';
 import cleanCSS from 'gulp-clean-css';
+import chokidar from 'chokidar';
 
 
 //configure commandline options, grabbed from the original stagesnextgen
@@ -210,6 +208,23 @@ gulp.task('default', () => console.log('Default task called'));
 });*/
 
 //default is just main.js as entry -> bundle.js assume is es6
+
+/***
+  **Tasks **
+  * Solidify Config/ clean and check merge, especially nested arrays
+  *finish less watcher
+  *figure out where to put icon files/config
+  *test watchers including webpack one
+  *figure out command line options, shelljs
+  *how to gzip init folder structure in github
+  *serve static http server in serve tasks
+  * write init task
+  * mocha for testing?
+  *write gzip function + command line 
+
+
+
+***/
 gulp.task('js', () => {
      if(!configure.javascript) return; //nothing to do not in the config
      //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
@@ -295,23 +310,23 @@ gulp.task('icon', () => {
     var stream1 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                       .pipe(spritesmith({
                          imgName: path.basename(configure.icon.spritePath),
-                         cssName: path.basename(configure.icon.spritePath, '.png') + '.json',
+                         cssName: path.basename(configure.icon.spritePath, '.png')  + path.extname(configure.icon.cssPath),
                          cssFormat: 'css',
                          imgPath: `${configure.root}/${configure.icon.spritePath}` //used inside the css file
                   }));
-                     // .pipe(gulp.dest(configure.sprite.outputPath, {cwd: configure.root}));  //need to combine the less files inside the stream somehow
-       merged.add(stream1);
+                
+    merged.add(stream1);
        const jsonf = gulpfilter('**/*.json', {restore: true});
        var stream2 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                          .pipe(spritesmith({
                             imgName: path.basename(configure.icon.spritePath),
-                            cssName: 'sprite.json',
+                            cssName: path.basename(configure.icon.spritePath, '.png') + '.json',
                             cssFormat: 'json_array' 
                          }))
                          .pipe(jsonf)
-                         .pipe(gulp.dest(path.dirname(configure.icon.spritePath), {cwd: configure.root}));
+                         .pipe(gulp.dest(configure.icon.src, {cwd: configure.root})); //place json and demo within icon folder for now
 
-       merged.add(stream2);
+    merged.add(stream2);
     var stream3 = gulp.src(`${configure.icon.src}/**/*.svg`, {cwd: configure.root})
                                 .pipe(iconfontCss({
                                   fontName: configure.icon.fontName,
@@ -326,35 +341,42 @@ gulp.task('icon', () => {
                                   formats: configure.icon.fontFormats
                                 }))
                                 .on('glyphs', function(glyphs){
+                                    function ensureDirectoryExistence(filePath) {
+                                          var dirname = path.dirname(filePath);
+                                          if (fs.existsSync(dirname)) {
+                                            return true;
+                                          }
+                                          ensureDirectoryExistence(dirname);
+                                          fs.mkdirSync(dirname);
+                                        }
                                 	//this function will create directories if they don't exist, otherwise writeFileSync will throw error
-                                	function mkdirp(filepath) {
-                                       var dirname = path.dirname(filepath);
-
-                                     if (!fs.existsSync(dirname)) {
-                                         mkdirp(dirname);
-                                    }
-
-                                    fs.mkdirSync(filepath);
-                                    }
-                                    mkdirp(`${configure.root}/${path.dirname(configure.icon.spritePath)}`);
-                                    fs.writeFileSync(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../iconfonts.json`,JSON.stringify(glyphs));
+                        
+                                    ensureDirectoryExistence(`${configure.root}/${configure.icon.src}/iconfonts.json`);
+                                    fs.writeFileSync(`${configure.root}/${configure.icon.src}/iconfonts.json`,JSON.stringify(glyphs));
                                 });
-      merged.add(stream3);
-
+    merged.add(stream3);
+   
    merged.on('end', () => {
+       const outputFile = new gutil.File({ path: `demo.html`}); 
        const data = {
-       	sprite: require(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../sprite.json`),
-       	iconfonts: require(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../iconfonts.json`)
-       }
-       fs.writeFileSync(`${configure.root}/${path.dirname(configure.icon.spritePath)}/../demo.html`, handlebars.compile(fs.readFileSync('./tpls/template.hbs.html', 'utf-8'))(data));
-       return gulp.src(`${path.dirname(configure.icon.spritePath)}/../demo.html`, {cwd: configure.root})
-           .pipe(replace("./icon.css", `./${path.basename(configure.icon.cssPath)}`))
-           .pipe(gulp.dest('./', {cwd: configure.root}));
+       	sprite: require(`${configure.root}/${configure.icon.src}/sprite.json`),
+       	iconfonts: require(`${configure.root}/${configure.icon.src}/iconfonts.json`)
+       };
 
-  
-   });
-    //this stream deals with the sprite.png file/ sprite.less
-  
+        merged.add(gulp.src('./tpls/template.hbs.html')
+                          .pipe(through2.obj(function(htmlFile, enc, cb){
+
+                                 var demo = handlebars.compile(htmlFile.contents.toString())(data);
+                            
+                           
+                            outputFile.contents =  new Buffer(demo);   
+                            this.push(outputFile);
+                             cb(); //end of each file
+                           }))
+                          .pipe(gsize({title: 'demo', showFiles: true}))
+                          .pipe(replace("../icon.css", `../${path.basename(configure.icon.cssPath)}`))
+                          .pipe(gulp.dest(configure.icon.src, {cwd: configure.root})));
+    });
 
     //now filter and combine the less files
     const lessf = gulpfilter(['**/*.less', '**/*.sass', '**/*.css'], {restore: true});
@@ -368,7 +390,7 @@ gulp.task('icon', () => {
           .pipe(gulp.dest(path.dirname(configure.icon.spritePath), {cwd: configure.root}))
           .pipe(spritef.restore)
           .pipe(fontsf)
-          .pipe(gulp.dest(configure.icon.fontDir, {cwd: configure.root}))
+          .pipe(gulp.dest(configure.icon.fontDir, {cwd: configure.root}));
 });
 
 
@@ -377,7 +399,8 @@ gulp.task('less', () => {
     if(!configure.stylesheet) return; //basically if they set configure.stylesheet as false than we skip it, otherwise we look within the merged config and go to default if not overridden
     var autoprefix = new autoprefixer({browsers: ['last 2 versions']});
     gulp.src(configure.stylesheet)
-         .pipe(insert.wrap('@import "src/theme/icon.less";\n', '@import "src/view/**/*.less";'))
+         .pipe(insert.prepend('@import "src/theme/icon.less";\n'))
+         .pipe(insert.append(`@import ${configure.stylesheet.specifics};`))
          .pipe(less({
          	   paths: [
          	      configure.root,
@@ -396,25 +419,29 @@ gulp.task('clean', () => {
     //del.sync() returns an array of deleted paths while del() returns a promise for an array of deleted paths.
     //force allows the deleting of current working directory and outside
     const deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
-    console.log('Number of files deleted:', deletedFiles.length);
+    console.log('Number of files/folders deleted:', deletedFiles.length);
     //formatting
 	  if(deletedFiles.length) deletedFiles.push('');// add an empty line.
 	  console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
 
 });
 
-/*gulp.task('min:html', () => {
-    return gulp.src(configure.templates.src, {cwd: configure.root})
+gulp.task('min', ['min:html', 'min:css', 'min:js']);
+
+gulp.task('min:html', () => {
+    return gulp.src(`${configure.output}/**/*.html`, {cwd: configure.root})
                .pipe(htmlmin({collapseWhitespace: true}))
+               .pipe(rename({suffix: '.min'}))
+               .pipe(gsize({title: 'minifyHTML', showFiles: true}))
                .pipe(gulp.dest(configure.output));
-});*/ //index.html only probably
+});//index.html only probably
 
 
 gulp.task('min:css', () => {
     return gulp.src(`${configure.output}/**/*.css`)
                .pipe(cleanCSS(configure.plugins.cleanCSS))
                .pipe(rename({suffix: '.min'}))
-               .pipe(gsize({title: minifyCSS, showFiles: true}))
+               .pipe(gsize({title: 'minifyCSS', showFiles: true}))
                .pipe(gulp.dest(configure.output));
 });
 
@@ -423,7 +450,7 @@ gulp.task('min:js', () => {
     return gulp.src(`${configure.output}/**/*.js`)
                .pipe(uglify())
                .pipe(rename({suffix: '.min'}))
-               .pipe(gsize({title: minifyJS, showFiles: true}))
+               .pipe(gsize({title: 'minifyJS', showFiles: true}))
                .pipe(gulp.dest(configure.output));
 });
 
@@ -449,50 +476,5 @@ gulp.task('assets', () => {
                              .pipe(gulp.dest(configure.output, {cwd: configure.root}));
       merged.add(renameStream);
      });
-  return merged.pipe(gsize({title: 'copies assets', showFiles: true}));
+  return merged.pipe(gsize({title: 'copied asset(s)', showFiles: true}));
   });
-
-
-
-/*gulp.task('sass', () => {
-	if(!configure.stylesheet) return;
-	gulp.src('src/view/main.sass')*/
-	  //  .pipe(insert.wrap('@import "src/theme/icon.sass"\n', '@import "src/view/**/*.sass";'))
-//})
-
-
-//===
-//tpl (using through2 to transform/combine files in stream)
-//===
-/*gulp.task('tpl', 'Combine HTML templates/components', tplTask);
-function tplTask(){
-    //console.log(configure.templates);
-    if(!configure.templates) return;
-    var tpls = {}; // --> JSON.stringify() upon 'finish'
-    var file = new gutil.File({path: 'templates.json'});
-    return gulp.src(configure.templates, {cwd: configure.root})
-
-        .pipe(size({showFiles: true, showTotal: false, title: 'tpl'}))
-        .pipe(through.obj(function(file, encode, cb){
-             gutil.log('files');
-            //on 'file'
-            //file is a vinyl File object (https://github.com/wearefractal/vinyl)
-            if(file.isBuffer()){ //skipping isNull() & isStream()
-                tpls[file.relative] = (String(file.contents)); //use as is
-                //comments are preserved, no tag and attribute cleanup.
-            }
-            gutil.log('about to call the callback');
-            this.push(file); //here without flush func. would cause files to just be pushed along. Still two separate html files at end.
-// with the flush function the result will be the two html files plus the completed template.json file
-            cb();     //won't pass down the examined template file.
-        }, function(cb){ //this is technically the flush function
-            //on 'finish'
-            gutil.log('Inside of the callback');
-            gutil.log(file.contents);
-            file.contents = new Buffer(JSON.stringify(tpls, null, 2)); //utf-8
-            this.push(file); //pass down the overall merged json file.
-            cb();
-        }))
-        .pipe(size({showFiles: true, title: 'tplfinal'}))
-        .pipe(gulp.dest(configure.output, {cwd: configure.root}));
-}*/

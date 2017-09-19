@@ -4,8 +4,8 @@
  * Tasks
  * -----
  * Required Steps to take care of:
- * First load config file in.
- * 1) Default: 'clean', 'js', 'tpl', 'css', 'assets' are called
+ * First load config file in using path, otherwise default path.
+ * 1) Default: 'clean', 'js', 'tpl', 'css', 'assets' are called. Basically the build process task!
  * 2) Tpl: (optional) combine html templates inside templates.json file (default name) or some user specified json file name. 
  *    Wrap into {name:content} with name being path? or name of html file and content being the html tags
  *    Grab html from user defined src or default is the one in init folder structure.
@@ -14,41 +14,35 @@
  *     OR
  *    b) If value is [] -> Concat/bundle non-es6 javascript into corresponding key targets.
  *    c) If user config wants lint than use jshint? jslint? -> default is not to lint (encourage users to use text editor linting)
- *    d) Concat/minify each file in value into key target file (for each target). (default is to do both, could have option to not minify) 
- *    e) FIGURE OUT PATH COLON THING
- *    f) TODO: need a default output file based on init command for stagejs (do we need to handle amd/requirejs?)
- * 4) CSS: 
+ *    d) Concat/minify each file in value into key target file (for each target). 
+ *    e) Uses webpack watch to watch the bundled files and monitor for changes before rebundling.
+ * 4) less: 
  *    a) Possible inputs: specific theme name as 'string' or an [{name, src, target}] where each obj is a diff theme.
- *    b) Will end up with  separate theme.css files in css output folder
- *    c) Make sure to always add component less files into each theme as well as include icons.less and textures.less which
- *       we generate by converting icons folder and textures folder into .less files then import into theme.less. 
- *    d) Account for how new icons, fonts, textures are added into folders and build. Node sprite generator, web fonts generator, later must resize png by prompting user
- * 5) Assets: Don't forget to copy fonts in b/c can't do with .less (unless is a web font which is in icons)
- * 		a. assets/* -> copy into /{output}/*
- * 		b. copy and re-dir/merge certain file/folder
- * 6. clean: clear the output folder.
- * 7. watch: watching changes and re-run js, css and tpl tasks.
+ *    b) Will end up with separate theme.css files in css output folder
+ *    c) Make sure to always add component less files into each theme as well as include icon.less.
+ * 5) icon:
+ *    a) Generate fonts and sprite.png from /icon and corresponding icon.less file
+ *    d) For png images might need to resize, through command line user 
+ * 6) assets: 
+ *    a) Default copies the /img folder and /font folder from src into the output folder. 
+ *    b) Also copy index.html into output folder
+ *    c) User can define what folders or files they want copied over or excluded
+ * 7) clean: clear the output folder.
+ * 8) watch:css
+ *    a) watching changes in less files, and recompiling less into main.css for output folder.
  * 
  * (tasks using `return gulp.src()...` will be running in parallel)
  * -----------------------------------------------------------------------------
- * Theme Assets Preparation Process:
- * 1. Gather font files from bower_components into [theme]/fonts? using assets?
- * 2. Process logos, icons, pics and merge them into [theme]/img/sprite.png and [theme]/img/img.less
- * 3. Process texture into [theme]/img/img.less as well b/c can't put inside sprite.png
- * 4. Build *.less into corresponding [theme].css file (always append all component less files in "src/ ** / *.less"
- * -----------------------------------------------------------------------------
  * Configure
  * ---------
- * see ./config/<name>.js
+ * see default.js for default config options.
  * 
  * Note
  * ----
  * 1. Javascripts will NOT be **linted** but css will always be **autoprefixed** and **cleaned**.
- * 2. use `gulp --config [name] [task]` to load a different configure per task run.
- * 3. Normal build sequence `gulp -C <config>` --> [`gulp -C <config> amd`] --> `gulp -C <config> compress`
- * 4. task:compress will not follow symbolic links.
- * 5. Gulp is using node-glob internally, so all the options for gulp.src are in there.
- * 
+ * 2. use `gulp --config [path] [task]` to load a different configure per task run. Otherwise searches in default user location for config file.
+ * 3. Gulp is using node-glob internally, so all the options for gulp.src are in there.
+ * 4. This gulp file requires babel preset es2015 as well as .babelrc config file. May also be put in package.json 
  * 
  * @author Cherie Huang
  * @created 2017.8.31
@@ -68,16 +62,14 @@ import gulpif from 'gulp-if';
 import lazypipe from 'lazypipe';
 import concat from 'gulp-concat';
 import sourcemaps from 'gulp-sourcemaps';
-import mergeStream from 'merge-stream'; //more popular than gulp-merge or merge2
+import mergeStream from 'merge-stream'; 
 import rename from 'gulp-rename';
 import spritesmith from 'gulp.spritesmith';
 import iconfont from 'gulp-iconfont';
 import iconfontCss from 'gulp-iconfont-css';
 import gulpfilter from 'gulp-filter';
 import replace from 'gulp-replace';
-import runSequence from 'run-sequence';
 import del from 'del';
-import hb from 'gulp-hb';
 import insert from 'gulp-insert';
 import handlebars from 'handlebars';
 import fs from 'fs';
@@ -85,158 +77,41 @@ import autoprefixer from 'less-plugin-autoprefix';
 import webpackS from 'webpack-stream';
 import webpack from 'webpack';
 import deepmerge from 'deepmerge';
-import htmlmin from 'html-minifier';
+import htmlmin from 'gulp-htmlmin';
 import cleanCSS from 'gulp-clean-css';
 import chokidar from 'chokidar';
+import shell from 'shelljs';
+import forever from 'forever-monitor';
 
 
-//configure commandline options, grabbed from the original stagesnextgen
 var argv = require('yargs').options({
     'C': {
         alias: 'config',
         describe: 'Specify a customized configure file to override base ones.',
-        default: 'default'
-    },
-    'P': {
-        alias: 'production',
-        describe: 'Further controls behavior of the amd task.',
-        default: false
-    },
-    'K': {
-        alias: 'keep',
-        describe: 'Whether to keep original .js/css/html files during compress.',
-        default: false
-    },
-    'T': {
-        alias: 'target',
-        describe: 'Filter targets in task:js and task:watch',
-        default: '' //',' (comma) separated list
     }
 }).argv;
 
-if(argv.h || argv.help) {
-    console.log('Use', 'gulp help'.yellow, 'instead...');
-    //require('child_process').spawnSync('gulp', ['help'], {stdio: 'inherit'}); v0.12.x
-    process.exit();
+let configure;
+try {
+    var userconfig = require(argv.C);
+    configure = deepmerge(require('./default.js'), require(argv.C), {arrayMerge: (dest, src, options) => {return src;}});
+    // do stuff
+} catch (ex) {
+    console.log('user config file not found, using default');
+    configure = require('./default.js');
 }
-// load the targeted configure.
-//import configure from `${__dirname}/config/${argv.C}`
-
-const configure = deepmerge(require(path.join(__dirname, 'config', 'default')),require(path.join(__dirname, 'config', argv.C)));
-//console.log(configure);
+console.log(configure);
 configure.root = configure.root || __dirname;
-//process the possible javascript targets passed through command line. If none then configure.targets = false. otherwise an object
-configure.targets = _.reduce(_.compact(argv.T.split(',')), function(targets, t){
-    targets[t] = true;
-    return targets;
-}, {});
-configure.targets = _.isEmpty(configure.targets) ? false : configure.targets;
-console.log('Using configure:', argv.C.yellow);
 
 
 
 
-// __dirname is always the directory in which the currently executing script resides.
-gulp.task('default', () => console.log('Default task called'));
+gulp.task('default', _.compact(['clean', 'js', 'less', 'assets']));
 
-//making reusable pipeline for bundling, transpiling, minifying js
-
-//SWITCH TO WEBPACK
-/*const processJS = {
-    bundle: lazypipe()
-            .pipe(function () {
-                //lazypipe calls the function and passes in no args. It instantiates a new gulp-if pipe and returns it to lazypipe
-               return gulpif(configure.javascript.lint,  jslint());
-            })
-             //remember that you might need vinyl-transform to transform standard text transform streams from npm into a vinyl pipeline like gulp.
-             //can't do this anymore cause browserify now returns a readable stream but vinyl transform expects a duplex stream.
-            .pipe(through2,(jsFile, enc, cb) => {
-                browserify(jsFile.path, _.extend({debug: true}, configure.plugins.browserify))
-                .transform("babelify", _.extend({presets: ["es2015"]},configure.plugins.babel)) //gives presets" ["es2015"]
-                .bundle((err, results) => {
-                    jsFile.contents = results;
-                    cb(null, jsFile); //results placed into entrypoint file and returned. Wraps with vinyl file
-                });
-            })
-            .pipe(function() {
-                return gulpif(configure.javascript.minify, uglify(configure.plugins.uglify));
-            }),
-    concat: lazypipe()
-    //initialize a new gulp sourcemap. Will be a new property added to vinyl file objects
-            .pipe(sourcemaps.init)
-            .pipe(concat, 'tmp.js', {newLine: ';'})
-            .pipe(sourcemaps.write) //does not actually write the sourcemap, just tells gulp to materialize them into a physical file when you call gulp.dest
-
-            
-
-}*/
-
-//default is just main.js as entry -> bundle.js assume is es6
-/*gulp.task('js', ['tpl'], () => {
-     if(!configure.javascript) return; //nothing to do not in the config
-     if(_.isEmpty(configure.javascript)) // user wants the default behavior empty js config object. using lodash function isEmpty()
-     {
-        return gulp.src('main.js', {cwd: configure.root})
-            //our default behavior with main.js
-            //don/t need to print size because only one entry point file
-            .pipe(processJS.bundle())
-            .pipe(rename({dirname: 'js', basename: 'app'}))
-            .pipe(gulp.dest(configure.output, {cwd: configure.root})); //places app.js into the outfile folder    
-     }//end of default behavior
-     //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
-     var merged = mergeStream();
-     _.forIn(configure.javascript, function(value,target){
-        //v is the string/array of paths. k is the javascript target file
-        //if the target object exists and is not false. But this current target is filtered out just return to move on to next target
-        if(configure.targets && !configure.targets[target]) return;
-        //should we have a compile only option??
-        //if(configure.compileonly && _.isArray(value)) return; //should compile only meaning only do the non array values
-        merged.add((_.isArray(value) ? 
-                (gulp.src(value, {cwd: configure.root})
-                     .pipe(gsize({title: `${target}.js:concat`, showFiles: true}))
-                     .pipe(processJS.concat()))
-        :
-                (gulp.src(value, {cwd: configure.root})
-                    .pipe(processJS.bundle()))
-                    )//ends ternary
-             .pipe(rename({basename: target, dirname: 'js'})) //everything js related is placed in js folder in output folder.]
-             .pipe(gulp.dest(configure.output, {cwd: configure.root}))
-        ); //ends merge.add
-     }); //ends forIn loop
-
-     return merged.pipe(gsize({title: 'alljs', showFiles: true}));
-});*/
-
-//default is just main.js as entry -> bundle.js assume is es6
-
-/***
-  **Tasks **
-  * Solidify Config/ clean and check merge, especially nested arrays
-  *finish less watcher
-  *figure out where to put icon files/config
-  *test watchers including webpack one
-  *figure out command line options, shelljs
-  *how to gzip init folder structure in github
-  *serve static http server in serve tasks
-  * write init task
-  * mocha for testing?
-  *write gzip function + command line 
-
-
-
-***/
 gulp.task('js', () => {
-     if(!configure.javascript) return; //nothing to do not in the config
-     //other case involves possible mix of es6 modules or a bunch of targets with different possible sources.
+     if(!configure.javascript) return; 
      var merged = mergeStream();
-     //configure.plugins.webpackStream = _.extend({plugins: [new webpack.optimize.UglifyJsPlugin()]}, configure.plugins.webpackStream);
-     //configure.javascript default behavior set in config due to merge already
      _.forIn(configure.javascript, function(value,target){
-        //v is the string/array of paths. k is the javascript target file
-        //if the target object exists and is not false. But this current target is filtered out just return to move on to next target
-        if(configure.targets && !configure.targets[target]) return;
-        //should we have a compile only option??
-        //if(configure.compileonly && _.isArray(value)) return; //should compile only meaning only do the non array values
         merged.add((_.isArray(value) ? 
                 (gulp.src(value, {cwd: configure.root})
                      .pipe(gsize({title: `${target}.js:concat`, showFiles: true}))
@@ -244,17 +119,16 @@ gulp.task('js', () => {
         :
                 (gulp.src(value, {cwd: configure.root})
                     .pipe(processJS.bundle()))
-                    )//ends ternary
-             .pipe(rename({basename: target, dirname: 'js'})) //everything js related is placed in js folder in output folder.]
+                    )
+             .pipe(rename({basename: target, dirname: 'js'}))
              .pipe(gulp.dest(configure.output, {cwd: configure.root}))
-        ); //ends merge.add
-     }); //ends forIn loop
+        ); 
+     }); 
 
      return merged.pipe(gsize({title: 'alljs', showFiles: true}));
 });
 
 
-//SWITCH TO WEBPACK
 const processJS = {
     bundle: lazypipe()
             .pipe(function () {
@@ -276,13 +150,11 @@ const processJS = {
 
 
 gulp.task('tpl', () => {
-    //if the user does not want to combine templates than we end this task
     if(!configure.templates) return;
-    //default if user does not specify output file name. Will be put in current output directory dist or whatever
     const outputFile = new gutil.File({ path: `${configure.templates.target}.json`}); 
     const tpls = {};
     return gulp.src(configure.templates.src, {cwd: configure.root})
-           .pipe(gsize({title: 'tpl-process', showFiles: true })) //just for logging purposes of size of each file in tpl-process
+           .pipe(gsize({title: 'tpl-process', showFiles: true })) 
            .pipe(through2.obj(function(htmlFile, enc, cb){
                 if( htmlFile.isBuffer()){
                     //must be a buffer for most plugins to work b/c gulp can't handle stream of streams
@@ -292,27 +164,26 @@ gulp.task('tpl', () => {
                 cb(); //end of each file
             }, function(cb){
                 outputFile.contents = new Buffer(JSON.stringify(tpls, null, 2));
-                this.push(outputFile); //don't use arrow function here because we need this
+                this.push(outputFile); //don't use arrow function here because we need 'this'
                 cb(); //must call at end of this flush function
             }))
-           .pipe(gsize({showFiles: true, title: 'tplfinal'})) //could minify templates.json later if needed and remove whitespace if user wants
+           .pipe(gsize({showFiles: true, title: 'tplfinal'})) 
            .pipe(gulp.dest(configure.output, {cwd: configure.root}));
-}); //end of tpl task
+}); 
 
 
 
-//textures will be ignored
+//textures are currently not supported in icon task
 gulp.task('icon', () => {
     if (!configure.icon) return; 
     const merged = mergeStream();
     const registry = [];
-    //these vars are used to make sure we grab correct portions from generalized config and put them into the right options
     var stream1 = gulp.src(`${configure.icon.src}/**/*.png`, {cwd: configure.root})
                       .pipe(spritesmith({
                          imgName: path.basename(configure.icon.spritePath),
                          cssName: path.basename(configure.icon.spritePath, '.png')  + path.extname(configure.icon.cssPath),
                          cssFormat: 'css',
-                         imgPath: `${configure.root}/${configure.icon.spritePath}` //used inside the css file
+                         imgPath: `${configure.root}${configure.icon.spritePath}` //used inside the css file
                   }));
                 
     merged.add(stream1);
@@ -332,7 +203,7 @@ gulp.task('icon', () => {
                                   fontName: configure.icon.fontName,
                                   path: 'css',
                                   targetPath: path.basename(configure.icon.cssPath),
-                                  fontPath: `${configure.root}/${configure.icon.fontDir}`
+                                  fontPath: `${configure.root}${configure.icon.fontDir}`
                                 }))
                                 .pipe(iconfont({
                                   fontName: configure.icon.fontName,
@@ -349,7 +220,7 @@ gulp.task('icon', () => {
                                           ensureDirectoryExistence(dirname);
                                           fs.mkdirSync(dirname);
                                         }
-                                	//this function will create directories if they don't exist, otherwise writeFileSync will throw error
+                                  //this function will create directories if they don't exist, otherwise writeFileSync will throw error
                         
                                     ensureDirectoryExistence(`${configure.root}/${configure.icon.src}/iconfonts.json`);
                                     fs.writeFileSync(`${configure.root}/${configure.icon.src}/iconfonts.json`,JSON.stringify(glyphs));
@@ -359,8 +230,8 @@ gulp.task('icon', () => {
    merged.on('end', () => {
        const outputFile = new gutil.File({ path: `demo.html`}); 
        const data = {
-       	sprite: require(`${configure.root}/${configure.icon.src}/sprite.json`),
-       	iconfonts: require(`${configure.root}/${configure.icon.src}/iconfonts.json`)
+        sprite: require(`${configure.root}/${configure.icon.src}/sprite.json`),
+        iconfonts: require(`${configure.root}/${configure.icon.src}/iconfonts.json`)
        };
 
         merged.add(gulp.src('./tpls/template.hbs.html')
@@ -394,25 +265,44 @@ gulp.task('icon', () => {
 });
 
 
-gulp.task('less', () => {
-    //configure.stylesheet is main.less or some .less file that is this themes css entrypoint
-    if(!configure.stylesheet) return; //basically if they set configure.stylesheet as false than we skip it, otherwise we look within the merged config and go to default if not overridden
-    var autoprefix = new autoprefixer({browsers: ['last 2 versions']});
-    gulp.src(configure.stylesheet)
+gulp.task('less', cssFunc);
+var cssFunc = () => {
+    if(!configure.stylesheet) return;
+    var autoprefix = new autoprefixer({browsers: ['last 2 version']});
+    gulp.src(configure.stylesheet.entrypoint, {cwd: configure.root})
          .pipe(insert.prepend('@import "src/theme/icon.less";\n'))
-         .pipe(insert.append(`@import ${configure.stylesheet.specifics};`))
+         .pipe(insert.append('@import "src/view/**/*.less";'))
          .pipe(less({
-         	   paths: [
-         	      configure.root,
-         	      path.join(configure.root, 'node_modules'),
-         	      path.join(configure.root, 'bower_components')   //basefolder to search for imports from ex: @import bootstrap/bootstrap.js inside of less 
-         	   ],
-         	   plugins: [autoprefix, require('less-plugin-glob')]
+             paths: [
+                configure.root,
+                path.join(configure.root, 'node_modules'),
+                path.join(configure.root, 'bower_components')   //basefolder to search for imports from ex: @import bootstrap/bootstrap.js inside of less 
+             ],
+             plugins: [autoprefix, require('less-plugin-glob')]
          }))
-         .pipe(gulp.dest(configure.output));
-        //.pipe(insert.append('@import "vars/**/*.less'))
+         .pipe(replace(`${configure.root}${configure.icon.spritePath}`, '../img/'))
+         .pipe(replace(`${configure.root}${configure.icon.fontDir}`, '../font/'))
+         .pipe(gulp.dest(`${configure.output}/css`, {cwd: configure.root}));
+     };
+
+
+gulp.task('watch:css', () => {
+    var cfg = configure.watchCSS;
+    var cssTaskD = _.debounce(cssFunc, cfg.delay.factor.debounce * cfg.delay.unit);
+     chokidar.watch(cfg.glob.css, {
+        cwd: configure.root,
+        usePolling: cfg.usePolling,
+        interval: cfg.delay.factor.poll * cfg.delay.unit,
+        binaryInterval: 3 * cfg.delay.factor.poll * cfg.delay.unit,
+        disableGlobbing: false
+     })
+     .on('all', (e, path) => {
+         console.log('css', e.yellow, path);
+         cssTaskD(); 
+     });
 
 });
+
 
 
 gulp.task('clean', () => {
@@ -420,9 +310,9 @@ gulp.task('clean', () => {
     //force allows the deleting of current working directory and outside
     const deletedFiles = del.sync('*', {cwd: path.join(configure.root, configure.output), force: true});
     console.log('Number of files/folders deleted:', deletedFiles.length);
-    //formatting
-	  if(deletedFiles.length) deletedFiles.push('');// add an empty line.
-	  console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
+
+  if(deletedFiles.length) deletedFiles.push('');// add an empty line.
+  console.log(deletedFiles.join(' [' + 'x'.red + ']' + require('os').EOL));
 
 });
 
@@ -433,30 +323,29 @@ gulp.task('min:html', () => {
                .pipe(htmlmin({collapseWhitespace: true}))
                .pipe(rename({suffix: '.min'}))
                .pipe(gsize({title: 'minifyHTML', showFiles: true}))
-               .pipe(gulp.dest(configure.output));
+               .pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });//index.html only probably
 
 
 gulp.task('min:css', () => {
-    return gulp.src(`${configure.output}/**/*.css`)
+    return gulp.src(`${configure.output}/**/*.css`, {cwd: configure.root})
                .pipe(cleanCSS(configure.plugins.cleanCSS))
                .pipe(rename({suffix: '.min'}))
                .pipe(gsize({title: 'minifyCSS', showFiles: true}))
-               .pipe(gulp.dest(configure.output));
+               .pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
-//use webpack plugin or use this and pump for error messages?
 gulp.task('min:js', () => {
-    return gulp.src(`${configure.output}/**/*.js`)
+    return gulp.src(`${configure.output}/**/*.js`, {cwd: configure.root})
                .pipe(uglify())
                .pipe(rename({suffix: '.min'}))
                .pipe(gsize({title: 'minifyJS', showFiles: true}))
-               .pipe(gulp.dest(configure.output));
+               .pipe(gulp.dest(configure.output, {cwd: configure.root}));
 });
 
 //assets is an array of strings and objects.
 gulp.task('assets', () => {
-	if(!configure.assets) return;
+  if(!configure.assets) return;
   const globCopy = [];
   const renameMap = {};
   _.each(configure.assets, (curr) => {
@@ -470,11 +359,29 @@ gulp.task('assets', () => {
   _.forIn(renameMap, (newDir, srcPath) => {
       let renameStream = gulp.src(srcPath, {cwd: configure.root})
                              .pipe(rename((curr) => {
-                             	   if(_.endsWith(srcPath, '/**/*') || _.endsWith(srcPath, '/*')) curr.dirname = newDir; // test/people.less becomes newdir/people.less
-                             	   else curr.dirname = path.join(newDir, curr.dirname); // test/* moves the whole directory into the new one so newdir/test/people.less etc - basically copies the whole folder
+                                 if(_.endsWith(srcPath, '/**/*') || _.endsWith(srcPath, '/*')) curr.dirname = newDir; 
+                                 else curr.dirname = path.join(newDir, curr.dirname); 
                              }))
                              .pipe(gulp.dest(configure.output, {cwd: configure.root}));
       merged.add(renameStream);
      });
   return merged.pipe(gsize({title: 'copied asset(s)', showFiles: true}));
   });
+
+
+gulp.task('serve', () => {
+    forever.start([path.join(configure.root, 'node_modules/.bin/http-server'), configure.output, '-p', argv.port || '5001', '-c-1'], {
+        max: 1,
+        cwd: configure.root
+    });
+
+    forever.start([path.join(configure.root, 'node_modules/.bin/gulp'), 'watch:css'], {
+        max: 1
+    });
+
+    forever.start([path.join(configure.root, 'node_modules/.bin/gulp'), 'js'], {
+        max: 1
+    });
+
+  });
+ 

@@ -10,9 +10,9 @@
     "type": "git",
     "url": "https://github.com/ch3riee/Stage.js-ng.git"
   },
-  "bin":{
-     "stagejs-ng": "./cli.js"
-    },
+  "bin": {
+    "stagejs-ng": "./cli.js"
+  },
   "author": "Cherie Huang",
   "license": "MIT",
   "dependencies": {
@@ -25,6 +25,7 @@
     "decompress-targz": "^4.1.1",
     "deepmerge": "^1.5.1",
     "del": "^3.0.0",
+    "forever-monitor": "^1.7.1",
     "fs-extra": "^4.0.2",
     "gulp": "^3.9.1",
     "gulp-autoprefixer": "^4.0.0",
@@ -36,7 +37,6 @@
     "gulp-iconfont-css": "^2.1.0",
     "gulp-if": "^2.0.2",
     "gulp-insert": "^0.5.0",
-    "gulp-jslint": "^1.0.10",
     "gulp-less": "^3.3.2",
     "gulp-rename": "^1.2.2",
     "gulp-replace": "^0.6.1",
@@ -49,8 +49,10 @@
     "less-plugin-autoprefix": "^1.5.1",
     "less-plugin-glob": "^2.0.1",
     "lodash": "^4.17.4",
+    "object-merge-advanced": "^7.1.2",
     "path": "^0.12.7",
     "request": "^2.81.0",
+    "run-sequence": "^2.2.0",
     "shelljs": "^0.7.8",
     "through2": "^2.0.3",
     "webpack": "^3.5.6",

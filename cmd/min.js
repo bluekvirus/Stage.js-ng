@@ -8,39 +8,42 @@ exports.command = 'min'
 exports.desc = 'Minimize html, js, and css files in output folder'
 exports.builder = {
   html: {
-    alias: 'H',
     describe: 'Minimize the html only',
+    type: 'boolean',
     default: false
   },
   css: {
-    alias: 'C',
     describe: 'Minimize the css only',
+    type: 'boolean',
     default: false
   },
   js: {
-  	alias: 'J',
   	describe: 'Minimize the js only',
+  	type: 'boolean',
   	default: false
   }
 }
 exports.handler = function(argv) {
 	    shell.cd(__dirname);
-	    if(argv.H)
+         console.log(argv.html);
+         console.log(argv.js);
+         console.log(argv.css);
+	    if(argv.html)
 	    {
-	    	shell.exec(`gulp -C "${argv.C}" min:html `);
+	    	shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  min:html --silent `);
 	    }
-	    else if(argv.C)
+	    else if(argv.css)
 	    {
-	    	shell.exec(`gulp -C "${argv.C}" min:css `);
+	    	shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  min:css --silent `);
 	    }
-	    else if(argv.J)
+	    else if(argv.js)
 	    {
-	    	shell.exec(`gulp -C "${argv.C}" min:js `);
+	    	shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  min:js --silent `);
 	    }
 	    else{
-            shell.exec(`gulp -C "${argv.C}"  min` ); 
+            shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  min  --silent`); 
 	    }
-	    console.log('Done with minimizing!');
+	   
 
 };
 

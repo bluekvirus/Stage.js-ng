@@ -8,7 +8,7 @@ exports.command = 'clean'
 exports.desc = 'Run the clean process on output folder'
 exports.handler = function(argv) {
 	    shell.cd(__dirname);
-	    shell.exec('gulp -C ' + argv.C + ' clean'); 
+	    shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  clean --silent `); 
 	    console.log('Done with cleaning!');
 
 };

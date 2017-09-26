@@ -26,6 +26,10 @@ var argv = yargs
   	'description': 'Config path change',
   	'default': `${cwd}/src/config.js`
   })
+  .option('root', {
+    'description': 'Pass cwd to gulp for project root',
+    'default': `${cwd}/`
+  })
   .help()
   .argv; 
 

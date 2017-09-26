@@ -8,6 +8,6 @@ exports.command = 'assets'
 exports.desc = 'Copies/Excludes resources into the output folder. Can re-direct copies to different folders'
 exports.handler = function(argv) {
 			shell.cd(__dirname);
-			shell.exec(`gulp -C "${argv.C}" assets `);
+			shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  assets --silent`);
 			console.log('Done with copying assets into output folder!');
 };

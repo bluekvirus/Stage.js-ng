@@ -51,7 +51,6 @@
 import colors from 'colors';
 import gulp from 'gulp';
 import less from 'gulp-less';
-import jslint from 'gulp-jslint';
 import gutil from 'gulp-util';
 import gsize from 'gulp-size';
 import path from 'path';
@@ -82,31 +81,43 @@ import cleanCSS from 'gulp-clean-css';
 import chokidar from 'chokidar';
 import shell from 'shelljs';
 import forever from 'forever-monitor';
+import runSequence from 'run-sequence';
 
 
 var argv = require('yargs').options({
     'C': {
         alias: 'config',
         describe: 'Specify a customized configure file to override base ones.',
+    },
+    'root': {
+        describe: 'Pass process.cwd from cli.js to gulp file. Internal option'
     }
 }).argv;
 
 let configure;
 try {
     var userconfig = require(argv.C);
-    configure = deepmerge(require('./default.js'), require(argv.C), {arrayMerge: (dest, src, options) => {return src;}});
+    var defaultconfig = require('./default.js');
+    configure = deepmerge(defaultconfig, userconfig, {arrayMerge: (dest, src, options) => {return src;}});
+    if(_.isArray(configure.stylesheet.entrypoint))
+    {
+      //need to concat 
+     configure.stylesheet.entrypoint =  _.concat(configure.stylesheet.entrypoint, defaultconfig.stylesheet.entrypoint);
+    }
+    configure.assets = _.concat(configure.assets, defaultconfig.assets);
     // do stuff
 } catch (ex) {
     console.log('user config file not found, using default');
     configure = require('./default.js');
 }
-console.log(configure);
-configure.root = configure.root || __dirname;
+
+configure.root = configure.root || argv.root;
 
 
 
-
-gulp.task('default', _.compact(['clean', 'js', 'less', 'assets']));
+gulp.task('default', (cb) =>{
+  runSequence('clean', 'less', 'assets', 'js');
+});
 
 gulp.task('js', () => {
      if(!configure.javascript) return; 
@@ -131,10 +142,6 @@ gulp.task('js', () => {
 
 const processJS = {
     bundle: lazypipe()
-            .pipe(function () {
-                //lazypipe calls the function and passes in no args. It instantiates a new gulp-if pipe and returns it to lazypipe
-               return gulpif(configure.javascript.lint,  jslint());
-            })
             .pipe(webpackS, configure.plugins.webpackStream),
     concat: lazypipe()
     //initialize a new gulp sourcemap. Will be a new property added to vinyl file objects
@@ -234,7 +241,7 @@ gulp.task('icon', () => {
         iconfonts: require(`${configure.root}/${configure.icon.src}/iconfonts.json`)
        };
 
-        merged.add(gulp.src('./tpls/template.hbs.html')
+        merged.add(gulp.src('./util/tpls/template.hbs.html')
                           .pipe(through2.obj(function(htmlFile, enc, cb){
 
                                  var demo = handlebars.compile(htmlFile.contents.toString())(data);
@@ -266,12 +273,11 @@ gulp.task('icon', () => {
 
 
 gulp.task('less', cssFunc);
-var cssFunc = () => {
+function cssFunc(){
     if(!configure.stylesheet) return;
     var autoprefix = new autoprefixer({browsers: ['last 2 version']});
-    gulp.src(configure.stylesheet.entrypoint, {cwd: configure.root})
-         .pipe(insert.prepend('@import "src/theme/icon.less";\n'))
-         .pipe(insert.append('@import "src/view/**/*.less";'))
+    return gulp.src(configure.stylesheet.entrypoint, {cwd: configure.root})
+         .pipe(insert.prepend('@import ' + `"${configure.icon.cssPath}"` + ';\n'))
          .pipe(less({
              paths: [
                 configure.root,

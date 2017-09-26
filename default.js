@@ -97,7 +97,7 @@ module.exports = {
         		  	exclude: /node_modules/, //excludes transpiling these 3rd party libs
         		  	query:{ //could add plugins: ['transform-runtime'] to extract babel's runtime helpers
         		  		cacheDirectory: true,
-        		  		presets: ['es2015'] //can add stage0, react, etc here as well
+        		  		presets: ['es2015', 'stage0'] //can add stage0, react, etc here as well
             	    }
                 }]//end of rules
              }

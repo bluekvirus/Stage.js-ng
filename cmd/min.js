@@ -25,9 +25,6 @@ exports.builder = {
 }
 exports.handler = function(argv) {
 	    shell.cd(__dirname);
-         console.log(argv.html);
-         console.log(argv.js);
-         console.log(argv.css);
 	    if(argv.html)
 	    {
 	    	shell.exec(`gulp -C "${argv.C}" --root "${argv.root}"  min:html --silent `);

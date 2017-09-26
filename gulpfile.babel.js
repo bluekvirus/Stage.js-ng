@@ -90,31 +90,29 @@ var argv = require('yargs').options({
         describe: 'Specify a customized configure file to override base ones.',
     },
     'root': {
-        describe: 'Pass process.cwd from cli.js to gulp file. Internal option'
+        describe: 'Pass the cwd in case the default is not the correct path'
     }
 }).argv;
 
+
+//This chunk deals with all the configuration merging 
 let configure;
 try {
     var userconfig = require(argv.C);
     var defaultconfig = require('./default.js');
     configure = deepmerge(defaultconfig, userconfig, {arrayMerge: (dest, src, options) => {return src;}});
-    if(_.isArray(configure.stylesheet.entrypoint))
-    {
-      //need to concat 
-     configure.stylesheet.entrypoint =  _.concat(configure.stylesheet.entrypoint, defaultconfig.stylesheet.entrypoint);
-    }
     configure.assets = _.concat(configure.assets, defaultconfig.assets);
     // do stuff
 } catch (ex) {
     console.log('user config file not found, using default');
     configure = require('./default.js');
 }
+//configure root path through cli.js command line now, not config file
+configure.root = argv.root;
 
-configure.root = configure.root || argv.root;
 
-
-
+//build command calls this default task
+//runSequence is used to make sure webpack watch does not block gulp task execution
 gulp.task('default', (cb) =>{
   runSequence('clean', 'less', 'assets', 'js');
 });
@@ -276,20 +274,27 @@ gulp.task('less', cssFunc);
 function cssFunc(){
     if(!configure.stylesheet) return;
     var autoprefix = new autoprefixer({browsers: ['last 2 version']});
-    return gulp.src(configure.stylesheet.entrypoint, {cwd: configure.root})
-         .pipe(insert.prepend('@import ' + `"${configure.icon.cssPath}"` + ';\n'))
-         .pipe(less({
-             paths: [
-                configure.root,
-                path.join(configure.root, 'node_modules'),
-                path.join(configure.root, 'bower_components')   //basefolder to search for imports from ex: @import bootstrap/bootstrap.js inside of less 
-             ],
-             plugins: [autoprefix, require('less-plugin-glob')]
-         }))
-         .pipe(replace(`${configure.root}${configure.icon.spritePath}`, '../img/'))
-         .pipe(replace(`${configure.root}${configure.icon.fontDir}`, '../font/'))
-         .pipe(gulp.dest(`${configure.output}/css`, {cwd: configure.root}));
-     };
+    var merged = mergeStream();
+    if(!_.isArray(configure.stylesheet.entrypoint)){
+      configure.stylesheet.entrypoint = [configure.stylesheet.entrypoint];
+    }
+    _.forEach(configure.stylesheet.entrypoint, function(theme){
+            merged.add( gulp.src(theme, {cwd: configure.root})
+                            .pipe(insert.prepend('@import ' + `"${configure.icon.cssPath}"` + ';\n'))
+                            .pipe(less({
+                                   paths: [
+                                            configure.root,
+                                            path.join(configure.root, 'node_modules'),
+                                            path.join(configure.root, 'bower_components')   //basefolder to search for imports from ex: @import bootstrap/bootstrap.js inside of less 
+                                         ],
+                                   plugins: [autoprefix, require('less-plugin-glob')]
+                             }))
+                           .pipe(replace(`${configure.root}${configure.icon.spritePath}`, '../img/'))
+                           .pipe(replace(`${configure.root}${configure.icon.fontDir}`, '../font/'))
+                           .pipe(gulp.dest(`${configure.output}/css`, {cwd: configure.root})));
+    })//ends foreach
+  return merged;
+};
 
 
 gulp.task('watch:css', () => {

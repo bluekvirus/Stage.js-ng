@@ -3,8 +3,7 @@ module.exports = {
 	//---------------dist path--------------
 	output: 'public',
 
-	root: '/Users/cheriehuang/Desktop/test/',
-
+   //root:  ,
 	//------------js (modules/libs)---------
 	// 'entrypoint' compile & bundle as es6 modules (import, expose. re-process during `watch`)
 	// '[...]' as vanilla js concat (won't re-process during `watch`)
@@ -12,9 +11,7 @@ module.exports = {
 		//app.js
 		app: 'src/entrypoint.js',
 		libs: [
-		'bower_components/jquery/dist/jquery.js',
-		'bower_components/underscore/underscore.js',
-		'bower_components/bootstrap/dist/js/bootstrap.js'] //testing concatenation
+		] //testing concatenation
 
 
 	},
@@ -35,6 +32,7 @@ module.exports = {
     	fontFormats: ['woff2', 'woff', 'ttf'],
         spritePath: 'src/theme/img/sprite.png',
         fontName: 'CustomIconFont',
+        //cssPath is path to icon.less file
         cssPath: 'src/theme/icon.less' 
     },
 
@@ -44,8 +42,7 @@ module.exports = {
 	//-----------------style----------------
 	// into app.css, (re-compile during `watch`)
 	stylesheet: {
-		entrypoint: 'src/theme/main.less',  //should this be an array? meaning multiple themes to process
-        specifics: 'src/view/**/*.less' //need to append the specifics
+		entrypoint: ['src/theme/main.less'],  //will be replaced if user specifies
 	},
 	
 

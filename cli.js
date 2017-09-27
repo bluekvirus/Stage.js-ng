@@ -24,7 +24,7 @@ var argv = yargs
   .option('C', {
   	'alias': 'config',
   	'description': 'Config path change',
-  	'default': `${cwd}/src/config.js`
+  	'default': `${cwd}/config.js`
   })
   .option('R', {
     'alias': 'root',

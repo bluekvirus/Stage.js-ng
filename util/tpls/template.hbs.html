@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="../icon.css">
+    <meta charset="utf-8">
+    <title> Examples </title>
+</head>
+<body style="background: #DDD">
+<h1>Sprite Icons </h1>
+<table>
+	<thead>
+		<th>Name</th>
+		<th>Preview</th>
+		<th>Usage</th>
+	</thead>
+	<tbody>
+	     {{#each sprite}}
+	                <tr>
+	                    <td>icon-{{ this.name }}</td>
+	                 <td style="padding:0.5em;"><i style="width:{{this.width}}px; height: {{this.width}}px; display:block;" class = "icon-{{this.name}}"></td>
+	                 <td>&lt;i class=&quot;icon-{{this.name}}&quot;&gt;&lt;/i&gt;</td>
+	                </tr>
+	                {{/each}}
+	</tbody>
+</table>
+<h1> Icon Fonts </h1>
+<table>
+		<thead>
+		<th>Name</th>
+		<th>Preview</th>
+		<th>Usage</th>
+	</thead>
+	<tbody>
+	     {{#each iconfonts}}
+	                <tr>
+	                    <td>icon-{{ this.name }}</td>
+	                 <td style="padding:0.5em;"><i style="font-size:4em;" class = "icon icon-{{this.name}}"></td>
+	                 <td>&lt;i class=&quot;icon-{{this.name}}&quot;&gt;&lt;/i&gt;</td>
+	                </tr>
+	                {{/each}}
+	</tbody>
+</table>
+</body>
+</html>

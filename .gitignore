@@ -1,8 +1,0 @@
-# Dist folder
-public
-
-# Dependency directory
-node_modules
-
-# Mac crap
-.DS_Store
